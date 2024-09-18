@@ -1,4 +1,7 @@
+# utils.py
+
 import yaml
+import logging
 
 
 def load_config(file_path='config.yaml'):
@@ -11,18 +14,18 @@ def load_config(file_path='config.yaml'):
     Returns:
         dict: A dictionary containing the configuration settings.
 
-    Error Handling:
-        - Handle file I/O errors (e.g., file not found).
-        - Log parsing errors if the YAML file structure is invalid.
+    Raises:
+        FileNotFoundError: If the specified file path does not exist.
+        yaml.YAMLError: If there is an issue parsing the YAML file.
     """
-    with open(file_path, 'r') as file:
-        try:
+    try:
+        # Open and read the YAML file
+        with open(file_path, 'r') as file:
             config = yaml.safe_load(file)
-        except yaml.YAMLError as e:
-            # Log error and handle appropriately
-            pass  # Replace with error handling
-        except FileNotFoundError:
-            # Log error and handle appropriately
-            pass  # Replace with error handling
-
-    return config
+        return config
+    except FileNotFoundError as fnf_error:
+        logging.error(f"Config file not found: {fnf_error}")
+        raise  # Re-raise the error after logging
+    except yaml.YAMLError as yaml_error:
+        logging.error(f"Error parsing YAML file: {yaml_error}")
+        raise  # Re-raise the error after logging
