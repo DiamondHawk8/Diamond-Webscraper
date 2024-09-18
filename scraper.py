@@ -1,9 +1,14 @@
+import requests
+import logging
+import time
+
+
 class WebScraper:
     """
     A class to fetch and parse data from websites.
     """
 
-    def __init__(self, base_url, headers):
+    def __init__(self, base_url, headers, timeout=10):
         """
         Initializes the WebScraper instance.
 
@@ -11,16 +16,15 @@ class WebScraper:
             base_url (str): The base URL for scraping.
             headers (dict): HTTP headers for the requests.
 
-        Suggested Variables:
-            - self.base_url
-            - self.headers
         """
-        # Step 1: Initialize the base URL and headers.
-        # Step 2: Ensure both parameters are passed and valid.
+        self.base_url = base_url
+        self.headers = headers
 
+        self.fetch_content(self.base_url, timeout=timeout)
         pass  # Replace with initialization logic
 
-    def fetch_content(self, url=None):
+    # TODO Implement retries and delay and timeout from config.yaml
+    def fetch_content(self, url=None, retries=3, delay=2, timeout=5):
         """
         Fetches HTML content from the specified URL.
 
@@ -34,19 +38,28 @@ class WebScraper:
             - Catch network exceptions (e.g., timeouts, connection errors).
             - Handle HTTP errors (e.g., 4xx, 5xx status codes).
             - Log errors for debugging purposes.
-
-        Suggested Implementation Steps:
-            - Use `requests.get()` to fetch the content.
-            - Use timeout and retries from the config.
-            - Check for successful status codes (200).
-            - Return the response content if successful.
         """
-        # Step 1: Use the base URL if no URL is provided.
-        # Step 2: Make the request using the `requests` library.
-        # Step 3: Handle network errors and log failures.
-        # Step 4: Return the fetched content if successful.
 
-        pass  # Replace with implementation logic
+        if url is None:
+            url = self.base_url
+        tries = 0
+        logging.info("Starting to fetch page {}".format(url))
+        while tries < retries:
+            try:
+                r = requests.get(url, timeout=timeout)
+                r.raise_for_status()  # raise error
+                print(f"Successfully fetched page on attempt {tries + 1}")
+                logging.info(f"Successfully fetched page on attempt {tries + 1}")
+                return r
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                tries += 1
+                logging.warning(f"Failed to fetch page on attempt {tries}, retrying in {delay} seconds")
+                time.sleep(delay)
+            except requests.exceptions.HTTPError as e:
+                logging.error(f"HTTP error occurred: {e}")
+                return None
+        logging.error(f"Failed to fetch page after {tries} attempts for {url}")
+        return None
 
     def parse_content(self, html_content):
         """
