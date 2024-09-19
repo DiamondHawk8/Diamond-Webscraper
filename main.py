@@ -1,3 +1,4 @@
+import utils
 from scraper import WebScraper
 from utils import load_config
 from data_processor import DataProcessor
@@ -12,6 +13,16 @@ def main():
 
     # Load configuration from config.yaml
     config = load_config()
+
+    # Ensure the log directory exists before setting up logging
+    log_file_path = config.get('log_file', 'scraper.log')
+    log_dir = os.path.dirname(log_file_path)
+
+    if log_dir and not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    # Set up logging
+    utils.setup_logging(log_file=log_file_path, log_level=config.get('log_level', 'INFO'))
     logging.info("Config loaded")
 
     # Check to see if the URL actually exists

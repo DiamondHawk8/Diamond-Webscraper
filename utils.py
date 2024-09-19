@@ -29,3 +29,17 @@ def load_config(file_path='config.yaml'):
     except yaml.YAMLError as yaml_error:
         logging.error(f"Error parsing YAML file: {yaml_error}")
         raise  # Re-raise the error after logging
+
+
+def setup_logging(log_file='scraper.log', log_level='INFO'):
+    """
+    Args:
+        log_file (str): The file to write the log messages to. Defaults to 'scraper.log'.
+        log_level (str): The logging level. Defaults to 'INFO'. Can be 'DEBUG', 'ERROR', etc.
+    """
+    logging.basicConfig(
+        filename=log_file,
+        level=getattr(logging, log_level.upper(), 'INFO'),
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )

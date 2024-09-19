@@ -36,13 +36,13 @@ class DataProcessor:
             if df[col].dtype == 'object':
                 try:
                     # Convert to numeric if possible, ignoring errors.
-                    df[col] = pd.to_numeric(df[col], errors='ignore')
+                    df[col] = pd.to_numeric(df[col])
                 except Exception as e:
                     logging.warning(f"Failed to convert column {col} to numeric: {e}")
 
             # If the column looks like dates, try to convert to datetime
             try:
-                df[col] = pd.to_datetime(df[col], errors='ignore')
+                df[col] = pd.to_datetime(df[col])
             except Exception as e:
                 logging.warning(f"Failed to convert column {col} to datetime: {e}")
         return df

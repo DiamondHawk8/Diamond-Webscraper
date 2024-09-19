@@ -17,5 +17,6 @@ timeout: 10  # Request timeout (in seconds)
 retries: 3   # Number of retry attempts for failed requests
 delay: 2     # Delay between retries (in seconds)
 
-# Log level
+# Logging settings
 log_level: "INFO"
+log_file: "scraper.log"
