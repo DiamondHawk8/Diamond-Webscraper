@@ -1,5 +1,3 @@
-# config.yaml
-
 # Base URL of the website to scrape
 base_url: "https://example.com"
 
@@ -17,3 +15,7 @@ save_location: "data.csv"
 # Optional settings
 timeout: 10  # Request timeout (in seconds)
 retries: 3   # Number of retry attempts for failed requests
+delay: 2     # Delay between retries (in seconds)
+
+# Log level
+log_level: "INFO"
