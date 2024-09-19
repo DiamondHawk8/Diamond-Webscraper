@@ -29,22 +29,29 @@ class DataProcessor:
         df.drop_duplicates(inplace=True)
         df.dropna(inplace=True)
 
-        # Attempt to ensure data is properly managed
-        # If column cannot be converted, remains as its original type
+        # TODO create lists of potential numeric and date values
+        # Process each column selectively
         for col in df.columns:
-            # Check if the column is likely numeric
-            if df[col].dtype == 'object':
+            if col.lower().startswith(('price', 'amount', 'quantity', 'value', 'total', 'sum', 'score')):
+                # Numeric-like columns
                 try:
-                    # Convert to numeric if possible, ignoring errors.
                     df[col] = pd.to_numeric(df[col])
+                    if df[col].isnull().any():
+                        logging.warning(f"Failed to fully convert column {col} to numeric")
                 except Exception as e:
                     logging.warning(f"Failed to convert column {col} to numeric: {e}")
 
-            # If the column looks like dates, try to convert to datetime
-            try:
-                df[col] = pd.to_datetime(df[col])
-            except Exception as e:
-                logging.warning(f"Failed to convert column {col} to datetime: {e}")
+            elif col.lower().startswith(('date', 'time', 'created', 'modified', 'at')):  # Date-like columns
+                try:
+                    df[col] = pd.to_datetime(df[col])
+                    if df[col].isnull().any():
+                        logging.warning(f"Failed to fully convert column {col} to datetime")
+                except Exception as e:
+                    logging.warning(f"Failed to convert column {col} to datetime: {e}")
+
+            else:
+                logging.info(f"Skipping conversion for column {col}")
+
         return df
 
     # TODO Potentially change mode to append/allow choice
