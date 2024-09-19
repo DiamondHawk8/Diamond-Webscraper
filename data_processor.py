@@ -1,4 +1,6 @@
 import pandas as pd
+import logging
+
 
 class DataProcessor:
     """
@@ -11,13 +13,9 @@ class DataProcessor:
 
         Args:
             data (list): The raw data extracted from the WebScraper (e.g., list of dictionaries).
-
-        Suggested Variables:
-            - self.data: Stores the raw data passed in.
-            - self.cleaned_data: Stores the cleaned version of the data (after cleaning).
         """
-        # Initialize instance variables
-        pass  # Replace this with actual initialization logic
+        self.data = data
+        self.cleaned_data = self.clean_data()
 
     def clean_data(self):
         """
@@ -25,19 +23,31 @@ class DataProcessor:
 
         Returns:
             pandas.DataFrame: The cleaned data as a DataFrame.
-
-        Steps:
-            - Convert the raw data (list) to a pandas DataFrame.
-            - Remove duplicates and handle missing values.
-            - Ensure data types are correct (e.g., converting strings to numeric types).
         """
-        # Step 1: Convert raw data to pandas DataFrame.
-        # Step 2: Remove duplicates using DataFrame.drop_duplicates().
-        # Step 3: Handle missing values using DataFrame.dropna() or DataFrame.fillna().
-        # Step 4: Ensure data types are correct (use pd.to_numeric() if needed).
+        logging.info("Cleaning data")
+        df = pd.DataFrame(self.data)
+        df.drop_duplicates(inplace=True)
+        df.dropna(inplace=True)
 
-        pass  # Replace this with actual cleaning logic
+        # Attempt to ensure data is properly managed
+        # If column cannot be converted, remains as its original type
+        for col in df.columns:
+            # Check if the column is likely numeric
+            if df[col].dtype == 'object':
+                try:
+                    # Convert to numeric if possible, ignoring errors.
+                    df[col] = pd.to_numeric(df[col], errors='ignore')
+                except Exception as e:
+                    logging.warning(f"Failed to convert column {col} to numeric: {e}")
 
+            # If the column looks like dates, try to convert to datetime
+            try:
+                df[col] = pd.to_datetime(df[col], errors='ignore')
+            except Exception as e:
+                logging.warning(f"Failed to convert column {col} to datetime: {e}")
+        return df
+
+    # TODO Potentially change mode to append/allow choice
     def save_data(self, file_path, file_format='csv'):
         """
         Saves the cleaned data to a file (CSV or JSON).
@@ -45,17 +55,21 @@ class DataProcessor:
         Args:
             file_path (str): The output file path (including filename).
             file_format (str): The format to save the data ('csv' or 'json'). Defaults to 'csv'.
-
-        Error Handling:
-            - Handle file I/O errors if the file cannot be written.
-            - Ensure the correct format is being used for saving.
-
-        Steps:
-            - Check the file format and use the corresponding pandas method (to_csv or to_json).
-            - Write the cleaned data to the specified file path.
         """
-        # Step 1: Check the file_format (csv or json).
-        # Step 2: Save the cleaned data using the appropriate pandas method (to_csv, to_json).
-        # Step 3: Handle any file I/O errors during the saving process.
+        logging.info("Saving data")
+        try:
+            if file_format not in ['csv', 'json']:
+                logging.error(f"File format must be 'csv' or 'json'. Found: {file_format}")
+                raise ValueError('file_format must be either "csv" or "json"')
+            else:
+                if file_format == 'csv':
 
-        pass  # Replace this with actual saving logic
+                    self.cleaned_data.to_csv(file_path, index=False)
+                    logging.info(f"Data successfully saved to {file_path} in CSV format.")
+                else:
+                    self.cleaned_data.to_json(file_path)
+                    logging.info(f"Data successfully saved to {file_path} in JSON format.")
+
+        except Exception as e:
+            logging.error(f"Error while saving data: {e}")
+            raise e
