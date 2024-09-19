@@ -46,7 +46,7 @@ class WebScraper:
                 tries += 1
                 logging.warning(f"Attempt {tries} failed: {e}. Retrying in {delay} seconds.")
                 time.sleep(delay)
-            except requests.exceptions.HTTPError as e:
+            except (requests.exceptions.HTTPError, requests.exceptions.RequestException) as e:
                 logging.error(f"HTTP error occurred: {e}")
                 return None
 

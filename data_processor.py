@@ -32,25 +32,26 @@ class DataProcessor:
         # TODO create lists of potential numeric and date values
         # Process each column selectively
         for col in df.columns:
-            if col.lower().startswith(('price', 'amount', 'quantity', 'value', 'total', 'sum', 'score')):
-                # Numeric-like columns
-                try:
-                    df[col] = pd.to_numeric(df[col])
-                    if df[col].isnull().any():
-                        logging.warning(f"Failed to fully convert column {col} to numeric")
-                except Exception as e:
-                    logging.warning(f"Failed to convert column {col} to numeric: {e}")
+            if isinstance(col, str):  # Ensure the column name is a string
+                if col.lower().startswith(('price', 'amount', 'quantity', 'value', 'total', 'sum', 'score')):
+                    # Numeric-like columns
+                    try:
+                        df[col] = pd.to_numeric(df[col])
+                        if df[col].isnull().any():
+                            logging.warning(f"Failed to fully convert column {col} to numeric")
+                    except Exception as e:
+                        logging.warning(f"Failed to convert column {col} to numeric: {e}")
 
-            elif col.lower().startswith(('date', 'time', 'created', 'modified', 'at')):  # Date-like columns
-                try:
-                    df[col] = pd.to_datetime(df[col])
-                    if df[col].isnull().any():
-                        logging.warning(f"Failed to fully convert column {col} to datetime")
-                except Exception as e:
-                    logging.warning(f"Failed to convert column {col} to datetime: {e}")
+                elif col.lower().startswith(('date', 'time', 'created', 'modified', 'at')):  # Date-like columns
+                    try:
+                        df[col] = pd.to_datetime(df[col])
+                        if df[col].isnull().any():
+                            logging.warning(f"Failed to fully convert column {col} to datetime")
+                    except Exception as e:
+                        logging.warning(f"Failed to convert column {col} to datetime: {e}")
 
-            else:
-                logging.info(f"Skipping conversion for column {col}")
+                else:
+                    logging.info(f"Skipping conversion for column {col}")
 
         return df
 
