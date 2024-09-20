@@ -15,7 +15,6 @@ logging.basicConfig(
 class TestDataProcessor(unittest.TestCase):
 
     def setUp(self):
-        """Set up any state that is shared between the test methods."""
         logging.info("\n========== Starting new test ==========")
 
     def test_clean_data(self):
@@ -46,7 +45,6 @@ class TestDataProcessor(unittest.TestCase):
             logging.error(f"Error in test_save_data_csv: {e}")
             raise
 
-        # Cleanup
         if os.path.exists('test_data.csv'):
             os.remove('test_data.csv')
             logging.info("CSV test file removed after validation")
@@ -70,7 +68,6 @@ class TestDataProcessor(unittest.TestCase):
             logging.error(f"Error in test_save_data_json: {e}")
             raise
 
-        # Cleanup
         if os.path.exists('test_data.json'):
             os.remove('test_data.json')
             logging.info("JSON test file removed after validation")
