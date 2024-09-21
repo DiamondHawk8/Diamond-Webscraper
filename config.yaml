@@ -11,9 +11,8 @@ format: "csv"
 save_location: "data.csv"
 
 # Retry logic settings
-retries:
-  max_retries: 3
-  backoff_factor: 2
+max_retries: 3
+backoff_factor: 2
 
 # Logging settings
 logging:
