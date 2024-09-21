@@ -15,7 +15,9 @@ class DataProcessor:
             data (list): The raw data extracted from the WebScraper (e.g., list of dictionaries).
         """
         self.data = data
-        self.cleaned_data = self.clean_data()
+
+        # TODO, probably remove this
+        self.normalized_data = None  # Set when normalize_data is called
 
     def clean_data(self):
         """
@@ -55,12 +57,48 @@ class DataProcessor:
 
         return df
 
+    def handle_missing_data(self, data_frame, strategy, value=None):
+        """
+        Handles missing values based on the strategy specified in config.yaml.
+        """
+
+        # Check to see if any values need to be handled in the first place
+        total_missing_before = data_frame.isnull().sum().sum()
+
+        if total_missing_before == 0:
+            logging.info("No missing values detected")
+            return data_frame
+
+        logging.info(f"Handling missing data with method: {strategy}")
+        # Processing is not done in place in case the original frame is needed later
+        if strategy == 'drop':
+            # TODO revise to all, and extrapolate data with more advanced reasoning (phase 4?)
+            processed_data_frame = data_frame.dropna(axis=0, how='any')
+        elif strategy == 'fill_mean':
+            processed_data_frame = data_frame.fillna(data_frame.mean())
+        elif strategy == 'fill_median':
+            processed_data_frame = data_frame.fillna(data_frame.median())
+        elif strategy == 'fill_value':
+            # TODO allow alue filling (phase 4)
+            processed_data_frame = data_frame.fillna(value)
+        else:
+            logging.warning(f"Strategy '{strategy}' is not supported.")
+            return data_frame
+
+        # Log the number of rows/columns affected
+        total_missing_after = processed_data_frame.isnull().sum().sum()
+        rows_affected = (total_missing_before - total_missing_after) / data_frame.shape[1]  # Average rows affected
+        logging.info(f"Handled {total_missing_before - total_missing_after} missing values across approximately"
+                     f" {rows_affected} rows.")
+        return processed_data_frame
+
     # TODO Potentially change mode to append/allow choice
-    def save_data(self, file_path, file_format='csv'):
+    def save_data(self, data_frame, file_path, file_format='csv'):
         """
         Saves the cleaned data to a file (CSV or JSON).
 
         Args:
+            data_frame: the data to be saved as a DataFrame.
             file_path (str): The output file path (including filename).
             file_format (str): The format to save the data ('csv' or 'json'). Defaults to 'csv'.
         """
@@ -72,10 +110,10 @@ class DataProcessor:
             else:
                 if file_format == 'csv':
 
-                    self.cleaned_data.to_csv(file_path, index=False)
+                    data_frame.to_csv(file_path, index=False)
                     logging.info(f"Data successfully saved to {file_path} in CSV format.")
                 else:
-                    self.cleaned_data.to_json(file_path)
+                    data_frame.to_json(file_path)
                     logging.info(f"Data successfully saved to {file_path} in JSON format.")
 
         except Exception as e:

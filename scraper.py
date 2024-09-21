@@ -4,6 +4,7 @@ import time
 from bs4 import BeautifulSoup
 import random
 
+
 def calculate_backoff(attempt, backoff_factor):
     """
     Calculates the backoff factor to prevent detection of automated retries
@@ -85,4 +86,3 @@ class WebScraper:
 
         logging.info(f"Extracted {len(content)} unique URLs from the page.")
         return content
-

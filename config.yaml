@@ -21,7 +21,8 @@ logging:
   log_level: "INFO"
 
 # Missing data handling strategy
-missing_data_strategy: "fill_mean"  # Options: drop, fill_mean, fill_median
+missing_data_strategy: "fill_mean"  # Options: drop, fill_mean, fill_median, fill_value
+value: 0
 
 # Visualization settings
 visualization_output: "./visualizations"

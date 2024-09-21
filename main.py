@@ -38,8 +38,31 @@ def main():
 
     if parsed_data:
         processor = DataProcessor(parsed_data)
-        processor.clean_data()
-        processor.save_data(config.get('save_data', 'data.csv'), config.get('format', 'csv'))
+
+        logging.info("Cleaning data...")
+
+        data_frame = processor.clean_data()
+
+        if config.get('missing_data_strategy') == 'fill_value':
+            data_frame = processor.handle_missing_data(
+                data_frame=data_frame,
+                strategy='fill_value',
+                value=config.get('value', 0),
+            )
+        else:
+            data_frame = processor.handle_missing_data(
+                data_frame=data_frame,
+                strategy=config.get('missing_data_strategy', 'fill_mean'),
+            )
+
+        logging.info(f"Missing data handled using strategy: {config.get('missing_data_strategy')}")
+        logging.info(f"Dataframe finished cleaning with {len(data_frame)} rows remaining")
+
+        processor.save_data(
+            data_frame,
+            config.get('save_data', 'data.csv'),
+            config.get('format', 'csv')
+        )
         logging.info(f"Saved {len(parsed_data)} items to file.")
 
     # End of scraping session
