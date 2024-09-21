@@ -2,6 +2,16 @@ import requests
 import logging
 import time
 from bs4 import BeautifulSoup
+import random
+
+def calculate_backoff(attempt, backoff_factor):
+    """
+    Calculates the backoff factor to prevent detection of automated retries
+    :returns delay (int): The delay in seconds to wait between retries.
+    """
+    delay = backoff_factor * (2 ** attempt)
+    jitter = random.uniform(0, 1)  # Adds random jitter between 0 and 1 second.
+    return delay + jitter
 
 
 class WebScraper:
@@ -15,42 +25,39 @@ class WebScraper:
         self.content = self.fetch_content(self.base_url, timeout=timeout)
         self.parsed_content = self.parse_content(self.content)
 
-    def fetch_content(self, url=None, retries=3, delay=2, timeout=5):
+    def fetch_content(self, url=None, retries=3, backoff_factor=2, timeout=10):
         """
         Fetches HTML content from the specified URL.
-
-        Args:
-            url (str): The URL to fetch content from. If None, uses self.base_url.
-            retries (int): Number of retry attempts on failure. Defaults to 3.
-            delay (int): Delay in seconds between retries. Defaults to 2 seconds.
-            timeout (int): Timeout in seconds for the HTTP request. Defaults to 5 seconds.
-
-        Returns:
-            str: The HTML content of the page, or None if all retries fail.
-
         """
 
         if url is None:
             url = self.base_url
 
-        tries = 0
+        attempt = 0
         logging.info(f"Starting to fetch page: {url}")
 
-        while tries < retries:
+        # Loop to handle retries
+        while attempt < retries:
+            delay = calculate_backoff(attempt, backoff_factor)
+
+            # Attempt to get response from url
             try:
                 response = requests.get(url, headers=self.headers, timeout=timeout)
                 response.raise_for_status()  # Raise HTTPError for bad responses
-                logging.info(f"Successfully fetched page on attempt {tries + 1}")
+                logging.info(f"Successfully fetched page on attempt {attempt + 1}")
                 return response.text
+
+            # Except non fatal errors
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
-                tries += 1
-                logging.warning(f"Attempt {tries} failed: {e}. Retrying in {delay} seconds.")
+                attempt += 1
+                logging.warning(f"Attempt {attempt} to fetch {url} failed: {e}. Retrying in {delay:.2f} seconds.")
                 time.sleep(delay)
+
             except (requests.exceptions.HTTPError, requests.exceptions.RequestException) as e:
                 logging.error(f"HTTP error occurred: {e}")
                 return None
 
-        logging.error(f"Failed to fetch page after {tries} attempts for {url}")
+        logging.error(f"Failed to fetch page after {attempt} attempts for {url}")
         return None
 
     def parse_content(self, html_content):
@@ -78,3 +85,4 @@ class WebScraper:
 
         logging.info(f"Extracted {len(content)} unique URLs from the page.")
         return content
+
