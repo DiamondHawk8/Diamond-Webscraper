@@ -30,8 +30,6 @@ class DataProcessor:
         """
         logging.info("Cleaning data")
         df = pd.DataFrame(self.data)
-        df.drop_duplicates(inplace=True)
-        df.dropna(inplace=True)
 
         # TODO create lists of potential numeric and date values
         # Process each column selectively
@@ -135,7 +133,7 @@ class DataProcessor:
             data = data_frame[column]
 
             # Check if the column is numeric
-            if data_frame[column].dtype in ['int64', 'float64']:
+            if pd.api.types.is_numeric_dtype(data):
                 if 'histogram' in visualization_types:
                     # Plot the histogram for numeric data
                     plt.figure()
@@ -145,12 +143,13 @@ class DataProcessor:
                     plt.ylabel('Frequency')
 
                     plot_path = os.path.join(output_dir, f"{column}_histogram.png")
+                    plt.tight_layout()
                     plt.savefig(plot_path)
                     plt.close()
                     logging.info(f"Histogram saved for column '{column}' at {plot_path}")
 
             # Check if the column is categorical (object type)
-            elif data_frame[column].dtype == 'object':
+            elif pd.api.types.is_object_dtype(data):
                 if 'bar' in visualization_types:
                     # Generate a bar plot for categorical data
                     plt.figure()
@@ -160,6 +159,7 @@ class DataProcessor:
                     plt.ylabel('Count')
 
                     plot_path = os.path.join(output_dir, f"{column}_bar.png")
+                    plt.tight_layout()
                     plt.savefig(plot_path)
                     plt.close()
                     logging.info(f"Bar plot saved for column '{column}' at {plot_path}")
