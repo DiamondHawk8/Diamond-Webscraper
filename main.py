@@ -65,8 +65,16 @@ def main():
         )
         logging.info(f"Saved {len(parsed_data)} items to file.")
 
-    # End of scraping session
-    logging.info("========== End of scraping session ==========")
+        # Data Visualization
+        visualization_types = config.get('visualization_types', ['histogram', 'bar'])
+        output_dir = config.get('visualization_output', 'visualizations/')
+
+        logging.info("Generating data visualizations...")
+        processor.visualize_data(data_frame, output_dir, visualization_types)
+        logging.info("Data visualizations completed.")
+
+        # End of scraping session
+        logging.info("========== End of scraping session ==========")
 
 
 if __name__ == '__main__':

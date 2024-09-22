@@ -1,5 +1,7 @@
 import pandas as pd
 import logging
+import os
+import matplotlib.pyplot as plt
 
 
 class DataProcessor:
@@ -119,3 +121,47 @@ class DataProcessor:
         except Exception as e:
             logging.error(f"Error while saving data: {e}")
             raise e
+
+    # TODO, add more advanced visualization options and customization (phase 3?)
+    def visualize_data(self, data_frame, output_dir, visualization_types):
+        """
+        Generates data visualizations based on the DataFrame columns.
+        """
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            logging.info(f"Visualization output directory created at {output_dir}")
+
+        for column in data_frame.columns:
+            data = data_frame[column]
+
+            # Check if the column is numeric
+            if data_frame[column].dtype in ['int64', 'float64']:
+                if 'histogram' in visualization_types:
+                    # Plot the histogram for numeric data
+                    plt.figure()
+                    data.hist(bins=15, edgecolor='black')
+                    plt.title(f'Histogram of {column}')
+                    plt.xlabel(column)
+                    plt.ylabel('Frequency')
+
+                    plot_path = os.path.join(output_dir, f"{column}_histogram.png")
+                    plt.savefig(plot_path)
+                    plt.close()
+                    logging.info(f"Histogram saved for column '{column}' at {plot_path}")
+
+            # Check if the column is categorical (object type)
+            elif data_frame[column].dtype == 'object':
+                if 'bar' in visualization_types:
+                    # Generate a bar plot for categorical data
+                    plt.figure()
+                    data.value_counts().plot(kind='bar', color='skyblue', edgecolor='black')
+                    plt.title(f'Bar Plot of {column}')
+                    plt.xlabel(column)
+                    plt.ylabel('Count')
+
+                    plot_path = os.path.join(output_dir, f"{column}_bar.png")
+                    plt.savefig(plot_path)
+                    plt.close()
+                    logging.info(f"Bar plot saved for column '{column}' at {plot_path}")
+            else:
+                logging.warning(f"Column '{column}' is neither numeric nor categorical and will be skipped.")
