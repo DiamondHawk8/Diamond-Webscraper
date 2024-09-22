@@ -23,42 +23,55 @@ class WebScraper:
     def __init__(self, base_url, headers, timeout=10):
         self.base_url = base_url
         self.headers = headers
-        self.content = self.fetch_content(self.base_url, timeout=timeout)
-        self.parsed_content = self.parse_content(self.content)
+        self.timeout = timeout
 
-    def fetch_content(self, url=None, retries=3, backoff_factor=2, timeout=10):
+    def fetch_content(self, url=None, max_retries=3, backoff_factor=2):
         """
-        Fetches HTML content from the specified URL.
-        """
+        Fetches HTML content from the specified URL with retry logic.
 
+        Args:
+            url (str): The URL to fetch content from.
+            max_retries (int): Maximum number of retry attempts.
+            backoff_factor (int): Factor for calculating backoff time.
+
+        Returns:
+            str: HTML content if successful, None otherwise.
+        """
         if url is None:
             url = self.base_url
 
         attempt = 0
         logging.info(f"Starting to fetch page: {url}")
 
-        # Loop to handle retries
-        while attempt < retries:
-            delay = calculate_backoff(attempt, backoff_factor)
-
-            # Attempt to get response from url
+        while attempt < max_retries:
             try:
-                response = requests.get(url, headers=self.headers, timeout=timeout)
-                response.raise_for_status()  # Raise HTTPError for bad responses
+                response = requests.get(url, headers=self.headers, timeout=self.timeout)
+                response.raise_for_status()
                 logging.info(f"Successfully fetched page on attempt {attempt + 1}")
                 return response.text
-
-            # Except non fatal errors
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
-                attempt += 1
-                logging.warning(f"Attempt {attempt} to fetch {url} failed: {e}. Retrying in {delay:.2f} seconds.")
+                delay = calculate_backoff(attempt, backoff_factor)
+                logging.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay:.2f} seconds.")
                 time.sleep(delay)
-
-            except (requests.exceptions.HTTPError, requests.exceptions.RequestException) as e:
-                logging.error(f"HTTP error occurred: {e}")
+                attempt += 1
+            except requests.exceptions.HTTPError as e:
+                status_code = e.response.status_code
+                if 500 <= status_code < 600:
+                    # Server error, retry
+                    delay = calculate_backoff(attempt, backoff_factor)
+                    logging.warning(
+                        f"Server error {status_code} on attempt {attempt + 1}: {e}. Retrying in {delay:.2f} seconds.")
+                    time.sleep(delay)
+                    attempt += 1
+                else:
+                    # Client error, do not retry
+                    logging.error(f"Client error {status_code}: {e}")
+                    return None
+            except requests.exceptions.RequestException as e:
+                logging.error(f"Request exception occurred: {e}")
                 return None
 
-        logging.error(f"Failed to fetch page after {attempt} attempts for {url}")
+        logging.error(f"Failed to fetch page after {max_retries} attempts for {url}")
         return None
 
     def parse_content(self, html_content):

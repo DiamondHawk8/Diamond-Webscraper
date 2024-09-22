@@ -1,18 +1,22 @@
+# config.yaml
+
 # Base URL of the website to scrape
 base_url: "https://example.com"
 
 # HTTP headers to mimic real browser requests
 headers:
-  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
   Accept-Language: "en-US,en;q=0.9"
 
-# Data saving format and location
-format: "csv"
-save_location: "data.csv"
+# Data saving settings
+data_saving:
+  file_format: "csv"
+  save_location: "data.csv"
 
 # Retry logic settings
-max_retries: 3
-backoff_factor: 2
+retry:
+  max_retries: 3
+  backoff_factor: 2
 
 # Logging settings
 logging:
@@ -20,14 +24,16 @@ logging:
   log_level: "INFO"
 
 # Missing data handling strategy
-missing_data_strategy: "fill_mean"  # Options: drop, fill_mean, fill_median, fill_value
-value: 0
+missing_data:
+  strategy: "fill_mean"  # Options: drop, fill_mean, fill_median, fill_value
+  fill_value: 0  # Used if strategy is 'fill_value'
 
 # Visualization settings
-visualization_output: "./visualizations"
-plot_types:
-  - histogram
-  - bar_chart
+visualization:
+  output_dir: "./visualizations"
+  types:
+    - histogram
+    - bar
 
 # Optional settings
 timeout: 10  # Request timeout (in seconds)

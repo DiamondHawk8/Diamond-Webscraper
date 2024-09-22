@@ -7,14 +7,13 @@ import os
 
 
 def main():
-    """
-    Main function to run the web scraping and data processing workflow.
-    """
-
     # Load configuration from config.yaml
     config = load_config()
 
-    utils.setup_logging(log_file=config.get('log_file', 'scraper.log'), log_level=config.get('log_level', 'INFO'))
+    # Access logging settings
+    log_file = config['logging'].get('log_file', 'scraper.log')
+    log_level = config['logging'].get('log_level', 'INFO')
+    utils.setup_logging(log_file=log_file, log_level=log_level)
 
     logging.info("Config loaded")
 
@@ -25,9 +24,8 @@ def main():
     )
 
     html_content = scraper.fetch_content(
-        retries=config.get('retries', 3),
-        backoff_factor=config.get('backoff_factor', 2),
-        timeout=config.get('timeout', 10)
+        max_retries=config['retry'].get('max_retries', 3),
+        backoff_factor=config['retry'].get('backoff_factor', 2)
     )
     logging.info("HTML content loaded")
 
@@ -60,14 +58,14 @@ def main():
 
         processor.save_data(
             data_frame,
-            config.get('save_data', 'data.csv'),
-            config.get('format', 'csv')
+            config['data_saving'].get('save_location', 'data.csv'),
+            config['data_saving'].get('file_format', 'csv')
         )
         logging.info(f"Saved {len(parsed_data)} items to file.")
 
         # Data Visualization
-        visualization_types = config.get('visualization_types', ['histogram', 'bar'])
-        output_dir = config.get('visualization_output', 'visualizations/')
+        visualization_types = config['visualization'].get('types', ['histogram', 'bar_chart'])
+        output_dir = config['visualization'].get('output_dir', 'visualizations/')
 
         logging.info("Generating data visualizations...")
         processor.visualize_data(data_frame, output_dir, visualization_types)

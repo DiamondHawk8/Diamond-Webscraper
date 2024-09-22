@@ -33,13 +33,16 @@ def load_config(file_path='config.yaml'):
 
 def setup_logging(log_file='scraper.log', log_level='INFO'):
     """
+    Sets up the logging configuration.
+
     Args:
         log_file (str): The file to write the log messages to. Defaults to 'scraper.log'.
         log_level (str): The logging level. Defaults to 'INFO'. Can be 'DEBUG', 'ERROR', etc.
     """
+    level = getattr(logging, log_level.upper(), logging.INFO)
     logging.basicConfig(
         filename=log_file,
-        level=getattr(logging, log_level.upper(), 'INFO'),
+        level=level,
         format='%(asctime)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
     )

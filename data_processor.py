@@ -18,9 +18,6 @@ class DataProcessor:
         """
         self.data = data
 
-        # TODO, probably remove this
-        self.normalized_data = None  # Set when normalize_data is called
-
     def clean_data(self):
         """
         Cleans the raw scraped data.
@@ -29,33 +26,29 @@ class DataProcessor:
             pandas.DataFrame: The cleaned data as a DataFrame.
         """
         logging.info("Cleaning data")
-        df = pd.DataFrame(self.data)
+        df = pd.DataFrame(self.data)  # Include all columns from self.data
 
-        # TODO create lists of potential numeric and date values
-        # Process each column selectively
+        # Define lists of columns to attempt conversion
+        numeric_cols = ['price', 'amount', 'quantity', 'value', 'total', 'sum', 'score', 'views']
+        datetime_cols = ['date', 'time', 'created', 'modified', 'at']
+
         for col in df.columns:
-            if isinstance(col, str):  # Ensure the column name is a string
-                if col.lower().startswith(('price', 'amount', 'quantity', 'value', 'total', 'sum', 'score')):
-                    # Numeric-like columns
-                    try:
-                        df[col] = pd.to_numeric(df[col])
-                        if df[col].isnull().any():
-                            logging.warning(f"Failed to fully convert column {col} to numeric")
-                    except Exception as e:
-                        logging.warning(f"Failed to convert column {col} to numeric: {e}")
-
-                elif col.lower().startswith(('date', 'time', 'created', 'modified', 'at')):  # Date-like columns
-                    try:
-                        df[col] = pd.to_datetime(df[col])
-                        if df[col].isnull().any():
-                            logging.warning(f"Failed to fully convert column {col} to datetime")
-                    except Exception as e:
-                        logging.warning(f"Failed to convert column {col} to datetime: {e}")
-
-                else:
-                    logging.info(f"Skipping conversion for column {col}")
-
+            if col.lower() in numeric_cols:
+                try:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                    logging.info(f"Converted column '{col}' to numeric type.")
+                except Exception as e:
+                    logging.warning(f"Failed to convert column '{col}' to numeric: {e}")
+            elif col.lower() in datetime_cols:
+                try:
+                    df[col] = pd.to_datetime(df[col], errors='coerce')
+                    logging.info(f"Converted column '{col}' to datetime type.")
+                except Exception as e:
+                    logging.warning(f"Failed to convert column '{col}' to datetime: {e}")
+            else:
+                logging.info(f"Skipping conversion for column '{col}'")
         return df
+
 
     def handle_missing_data(self, data_frame, strategy, value=None):
         """
@@ -75,9 +68,9 @@ class DataProcessor:
             # TODO revise to all, and extrapolate data with more advanced reasoning (phase 4?)
             processed_data_frame = data_frame.dropna(axis=0, how='any')
         elif strategy == 'fill_mean':
-            processed_data_frame = data_frame.fillna(data_frame.mean())
+            processed_data_frame = data_frame.fillna(data_frame.mean(numeric_only=True))
         elif strategy == 'fill_median':
-            processed_data_frame = data_frame.fillna(data_frame.median())
+            processed_data_frame = data_frame.fillna(data_frame.median(numeric_only=True))
         elif strategy == 'fill_value':
             # TODO allow alue filling (phase 4)
             processed_data_frame = data_frame.fillna(value)
@@ -124,6 +117,11 @@ class DataProcessor:
     def visualize_data(self, data_frame, output_dir, visualization_types):
         """
         Generates data visualizations based on the DataFrame columns.
+
+        Args:
+            data_frame (pd.DataFrame): The data to visualize.
+            output_dir (str): Directory to save the visualizations.
+            visualization_types (list): Types of visualizations to generate.
         """
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -132,12 +130,10 @@ class DataProcessor:
         for column in data_frame.columns:
             data = data_frame[column]
 
-            # Check if the column is numeric
             if pd.api.types.is_numeric_dtype(data):
                 if 'histogram' in visualization_types:
-                    # Plot the histogram for numeric data
                     plt.figure()
-                    data.hist(bins=15, edgecolor='black')
+                    data.dropna().hist(bins=15, edgecolor='black')
                     plt.title(f'Histogram of {column}')
                     plt.xlabel(column)
                     plt.ylabel('Frequency')
@@ -148,20 +144,18 @@ class DataProcessor:
                     plt.close()
                     logging.info(f"Histogram saved for column '{column}' at {plot_path}")
 
-            # Check if the column is categorical (object type)
             elif pd.api.types.is_object_dtype(data):
-                if 'bar' in visualization_types:
-                    # Generate a bar plot for categorical data
+                if 'bar_chart' in visualization_types:
                     plt.figure()
                     data.value_counts().plot(kind='bar', color='skyblue', edgecolor='black')
-                    plt.title(f'Bar Plot of {column}')
+                    plt.title(f'Bar Chart of {column}')
                     plt.xlabel(column)
                     plt.ylabel('Count')
 
-                    plot_path = os.path.join(output_dir, f"{column}_bar.png")
+                    plot_path = os.path.join(output_dir, f"{column}_bar_chart.png")
                     plt.tight_layout()
                     plt.savefig(plot_path)
                     plt.close()
-                    logging.info(f"Bar plot saved for column '{column}' at {plot_path}")
+                    logging.info(f"Bar chart saved for column '{column}' at {plot_path}")
             else:
                 logging.warning(f"Column '{column}' is neither numeric nor categorical and will be skipped.")

@@ -1,55 +1,70 @@
+# test_data_processor.py
+
 import unittest
 from data_processor import DataProcessor
 import pandas as pd
 import logging
 import os
-
-# Set up logging for the test cases
-logging.basicConfig(
-    filename='test_data_processor.log',
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-)
+import tempfile
 
 
 class TestDataProcessor(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        # Configure logging once for all tests
+        logging.basicConfig(
+            filename='test_data_processor.log',
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+        )
+        logging.info("\n========== Starting DataProcessor Tests ==========")
+
     def setUp(self):
-        logging.info("\n========== Starting new test ==========")
-        # Ensure the output directory for visualizations exists
-        if not os.path.exists('visualizations'):
-            os.makedirs('visualizations')
+        logging.info("========== Starting new test ==========")
+        # Create a temporary directory for visualizations
+        self.temp_dir = tempfile.mkdtemp()
 
     def test_clean_data(self):
         logging.info("========== Starting: test_clean_data ==========")
 
-        # Use more comprehensive raw data for better test coverage
-        raw_data = [{'url': 'https://example.com', 'name': 'Test', 'price': '20.5'},
-                    {'url': 'https://example.com/page2', 'name': None, 'price': '15.0'},
-                    {'url': 'https://example.com/page3', 'name': 'Another', 'price': None}]
+        raw_data = [
+            {'url': 'https://example.com', 'name': 'Test', 'price': '20.5', 'date': '2021-01-01'},
+            {'url': 'https://example.com/page2', 'name': None, 'price': '15.0', 'date': '2021-02-01'},
+            {'url': 'https://example.com/page3', 'name': 'Another', 'price': None, 'date': 'Invalid Date'}
+        ]
 
         processor = DataProcessor(raw_data)
         cleaned_data = processor.clean_data()
 
-        self.assertIsInstance(cleaned_data, pd.DataFrame)
-        self.assertFalse(cleaned_data.empty)
+        # Verify data types
+        self.assertTrue(pd.api.types.is_numeric_dtype(cleaned_data['price']), "Price column should be numeric")
+        self.assertTrue(pd.api.types.is_datetime64_any_dtype(cleaned_data['date']), "Date column should be datetime")
+        self.assertEqual(cleaned_data.loc[0, 'name'], 'Test', "Name should be preserved as 'Test'")
+
         logging.info("Completed: test_clean_data")
 
     def test_handle_missing_data(self):
         logging.info("========== Starting: test_handle_missing_data ==========")
 
-        raw_data = [{'url': 'https://example.com', 'name': 'Test', 'price': None},
-                    {'url': 'https://example.com/page2', 'name': None, 'price': '15.0'}]
+        raw_data = [
+            {'url': 'https://example.com', 'name': 'Test', 'price': None},
+            {'url': 'https://example.com/page2', 'name': None, 'price': '15.0'}
+        ]
 
         processor = DataProcessor(raw_data)
         cleaned_data = processor.clean_data()
 
         # Applying 'fill_value' strategy
-        handled_data = processor.handle_missing_data(cleaned_data, strategy='fill_value', value=0)
+        handled_data = processor.handle_missing_data(
+            cleaned_data, strategy='fill_value', value='N/A'
+        )
 
-        # Verify that there are no missing values and the correct replacements were made
+        # Verify that missing values have been filled with 'N/A'
         self.assertFalse(handled_data.isnull().values.any())
-        self.assertTrue((handled_data['name'] == 0).any())
+        self.assertTrue((handled_data['name'] == 'N/A').any())
+        self.assertTrue((handled_data['price'] == 'N/A').any())
+
         logging.info("Completed: test_handle_missing_data")
 
     def test_save_data_csv(self):
@@ -57,23 +72,18 @@ class TestDataProcessor(unittest.TestCase):
 
         raw_data = [{'url': 'https://example.com', 'name': 'Test'}]
         processor = DataProcessor(raw_data)
-        cleaned_data = processor.clean_data()  # Make sure it's a DataFrame
-        processor.save_data(cleaned_data, 'test_data.csv', 'csv')
+        cleaned_data = processor.clean_data()
 
-        # Check if the file was created and has content
-        try:
-            with open('test_data.csv', 'r') as f:
+        with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as temp_file:
+            processor.save_data(cleaned_data, temp_file.name, 'csv')
+
+            # Read from temp_file and perform assertions
+            with open(temp_file.name, 'r') as f:
                 content = f.read()
                 self.assertIn('Test', content)
-            logging.info("test_save_data_csv: CSV file saved and validated successfully")
-        except Exception as e:
-            logging.error(f"Error in test_save_data_csv: {e}")
-            raise
 
-        if os.path.exists('test_data.csv'):
-            os.remove('test_data.csv')
-            logging.info("CSV test file removed after validation")
-
+        # Clean up temporary file
+        os.remove(temp_file.name)
         logging.info("Completed: test_save_data_csv")
 
     def test_save_data_json(self):
@@ -81,29 +91,23 @@ class TestDataProcessor(unittest.TestCase):
 
         raw_data = [{'url': 'https://example.com', 'name': 'Test'}]
         processor = DataProcessor(raw_data)
-        cleaned_data = processor.clean_data()  # Ensure it's a DataFrame
-        processor.save_data(cleaned_data, 'test_data.json', 'json')
+        cleaned_data = processor.clean_data()
 
-        # Check if the file was created and has content
-        try:
-            with open('test_data.json', 'r') as f:
+        with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as temp_file:
+            processor.save_data(cleaned_data, temp_file.name, 'json')
+
+            # Read from temp_file and perform assertions
+            with open(temp_file.name, 'r') as f:
                 content = f.read()
                 self.assertIn('Test', content)
-            logging.info("test_save_data_json: JSON file saved and validated successfully")
-        except Exception as e:
-            logging.error(f"Error in test_save_data_json: {e}")
-            raise
 
-        if os.path.exists('test_data.json'):
-            os.remove('test_data.json')
-            logging.info("JSON test file removed after validation")
-
+        # Clean up temporary file
+        os.remove(temp_file.name)
         logging.info("Completed: test_save_data_json")
 
     def test_visualize_data(self):
         logging.info("========== Starting: test_visualize_data ==========")
 
-        # Use more comprehensive data for visualization
         raw_data = [
             {'url': 'https://example.com', 'views': 100, 'category': 'Tech'},
             {'url': 'https://example.com/page2', 'views': 150, 'category': 'Health'},
@@ -116,27 +120,33 @@ class TestDataProcessor(unittest.TestCase):
 
         processor.visualize_data(
             data_frame=cleaned_data,
-            output_dir='visualizations',
-            visualization_types=['histogram', 'bar']
+            output_dir=self.temp_dir,
+            visualization_types=['histogram', 'bar_chart']
         )
 
         # Check if the visualization files were created
-        expected_files = ['visualizations/url_bar.png', 'visualizations/category_bar.png',
-                          'visualizations/views_histogram.png']
-        for file in expected_files:
-            self.assertTrue(os.path.exists(file))
-            logging.info(f"Visualization created: {file}")
+        expected_files = [
+            os.path.join(self.temp_dir, 'views_histogram.png'),
+            os.path.join(self.temp_dir, 'category_bar_chart.png')
+        ]
 
-            # Clean up after the test
-            os.remove(file)
+        for file_path in expected_files:
+            self.assertTrue(os.path.exists(file_path), f"Visualization file {file_path} should exist.")
+            logging.info(f"Visualization created: {file_path}")
 
         logging.info("Completed: test_visualize_data")
 
     def tearDown(self):
-        # Clean up the visualizations directory if empty
-        if os.path.exists('visualizations') and not os.listdir('visualizations'):
-            os.rmdir('visualizations')
+        # Remove temporary directory and its contents
+        if os.path.exists(self.temp_dir):
+            for root, dirs, files in os.walk(self.temp_dir, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+            os.rmdir(self.temp_dir)
 
+    @classmethod
+    def tearDownClass(cls):
+        logging.info("\n========== Completed DataProcessor Tests ==========")
 
 if __name__ == '__main__':
     unittest.main()
