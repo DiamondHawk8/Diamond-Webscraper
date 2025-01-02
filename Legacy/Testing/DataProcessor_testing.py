@@ -1,7 +1,7 @@
 # test_data_processor.py
 
 import unittest
-from data_processor import DataProcessor
+from Legacy.data_processor import DataProcessor
 import pandas as pd
 import logging
 import os

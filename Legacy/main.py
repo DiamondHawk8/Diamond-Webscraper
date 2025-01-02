@@ -3,7 +3,6 @@ from scraper import WebScraper
 from utils import load_config
 from data_processor import DataProcessor
 import logging
-import os
 
 
 def main():

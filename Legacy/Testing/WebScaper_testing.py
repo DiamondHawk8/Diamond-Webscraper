@@ -1,12 +1,12 @@
 # test_scraper.py
 
 import unittest
-from scraper import WebScraper, calculate_backoff
+from Legacy.scraper import WebScraper, calculate_backoff
 from unittest.mock import patch
 import requests
 import logging
 from requests.models import Response
-import random
+
 
 class TestWebScraper(unittest.TestCase):
 
