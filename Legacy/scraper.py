@@ -5,14 +5,9 @@ from bs4 import BeautifulSoup
 import random
 
 
+# removed
 def calculate_backoff(attempt, backoff_factor):
-    """
-    Calculates the backoff factor to prevent detection of automated retries
-    :returns delay (int): The delay in seconds to wait between retries.
-    """
-    delay = backoff_factor * (2 ** attempt)
-    jitter = random.uniform(0, 1)  # Adds random jitter between 0 and 1 second.
-    return delay + jitter
+    pass
 
 
 class WebScraper:
