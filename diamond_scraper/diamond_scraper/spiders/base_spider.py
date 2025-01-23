@@ -4,7 +4,7 @@ from scrapy.crawler import CrawlerProcess
 
 class BaseSpider(scrapy.Spider):
     name = 'base'
-    urls = ["https://books.toscrape.com/"]
+    urls = ["https://en.wikipedia.org/wiki/World_War_II"]
     custom_settings = {
         "FEED_FORMAT": "json",
         "FEED_URI": "output.json",
@@ -12,14 +12,38 @@ class BaseSpider(scrapy.Spider):
     # var to track total price of books
     total_price = 0
     books_scraped = 0
+    max_depth = 3
 
     def start_requests(self):
         for url in self.urls:
             # yield scrapy.Request(url=url, callback=self.parse)
-            yield scrapy.Request(url=url, callback=self.parse_books)
+            yield scrapy.Request(url=url, callback=self.parse_wikipedia)
 
-
+    # Extract all categories of a given wikipedia page, and follow any see also links to a give depth
     def parse_wikipedia(self, response):
+        # Get the depth of the request, with 0 as default to account for first request
+        current_depth = response.meta.get('depth', 0)
+        title = response.css("span.mw-page-title-main::text").get()
+        categories = response.css("div.mw-normal-catlinks ul li a::attr(href)").getall()
+        cleaned_categories = []
+
+        for category in categories:
+            category = category.strip()[category.index(":")+1:].replace('_', " ")
+            cleaned_categories.append(category)
+        if current_depth < self.max_depth:
+            follow_links = response.css("div.mw-heading.mw-heading2 + ul li a::attr(href)").getall()
+            if len(follow_links) > 0:
+                for link in follow_links:
+                    if "/wiki/" in link:
+                        yield response.follow(link, callback=self.parse_wikipedia,
+                                              meta={"depth": current_depth + 1})
+
+
+        yield {'title': title,
+               'categories': cleaned_categories,
+               'depth': current_depth
+               }
+
 
 
     def parse_books(self, response):
