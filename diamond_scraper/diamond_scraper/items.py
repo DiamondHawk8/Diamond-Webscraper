@@ -13,14 +13,15 @@ class YahooFinanceStockItem(scrapy.Item):
     name = scrapy.Field()
     currency = scrapy.Field()
 
-    # Regular fields
     timestamp = scrapy.Field()
     price = scrapy.Field()
     priceChange = scrapy.Field()
     percentChange = scrapy.Field()
+    open = scrapy.Field()
+    volume = scrapy.Field()
+    marketCap = scrapy.Field()
+    dayHigh = scrapy.Field()
+    dayLow = scrapy.Field()
+    peRatio = scrapy.Field()
+    eps = scrapy.Field()
 
-    # After hours fields
-    AHtimestamp = scrapy.Field()
-    AHprice = scrapy.Field()
-    AHpriceChange = scrapy.Field()
-    AHpercentChange = scrapy.Field()

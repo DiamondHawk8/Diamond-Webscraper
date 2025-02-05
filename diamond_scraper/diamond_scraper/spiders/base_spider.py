@@ -4,7 +4,7 @@ from scrapy.crawler import CrawlerProcess
 
 class BaseSpider(scrapy.Spider):
     name = 'base'
-    urls = ["https://en.wikipedia.org/wiki/World_War_II"]
+    urls = ["https://www.marketwatch.com/investing/stock/tsla"]
     custom_settings = {
         "FEED_FORMAT": "json",
         "FEED_URI": "output.json",
@@ -17,7 +17,7 @@ class BaseSpider(scrapy.Spider):
     def start_requests(self):
         for url in self.urls:
             # yield scrapy.Request(url=url, callback=self.parse)
-            yield scrapy.Request(url=url, callback=self.parse_wikipedia)
+            yield scrapy.Request(url=url, callback=self.parse_market_watch)
 
     # Extract all categories of a given wikipedia page, and follow any see also links to a give depth
     def parse_wikipedia(self, response):
@@ -86,3 +86,16 @@ class BaseSpider(scrapy.Spider):
 
             if t2:
                 yield response.follow(url=t2, callback=self.parse)
+
+    def parse_market_watch(self, response):
+        tickerSymbol = response.css("span.company__ticker::text").get()
+        name = response.css("h1.company__name::text").get()
+        currency = response.css("h2.intraday__price sup.character::text").get()
+        timestamp = response.css("span.timestamp__time bg-quote::text").get()
+        timezone = response.css("span.timestamp__time::text").getall()[-1]
+        price = response.css("h2.intraday__price bg-quote::text").get()
+        priceChange =  response.css("h2.intraday__price sup.character::text").get()
+        percentCahnge = response.css("h2.intraday__price bg-quote::text").get()
+        print("--------------------------------------------------------------------------------------------------------------------",price)
+
+
