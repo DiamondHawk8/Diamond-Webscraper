@@ -44,8 +44,6 @@ class BaseSpider(scrapy.Spider):
                'depth': current_depth
                }
 
-
-
     def parse_books(self, response):
         # For each book container in site
         for book in response.css('article.product_pod'):
