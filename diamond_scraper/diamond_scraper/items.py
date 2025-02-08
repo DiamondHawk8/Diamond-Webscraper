@@ -19,6 +19,7 @@ class YahooFinanceStockItem(scrapy.Item):
     percentChange = scrapy.Field()
     open = scrapy.Field()
     volume = scrapy.Field()
+    avgVolume = scrapy.Field()
     marketCap = scrapy.Field()
     dayHigh = scrapy.Field()
     dayLow = scrapy.Field()

@@ -94,8 +94,36 @@ class BaseSpider(scrapy.Spider):
         timestamp = response.css("span.timestamp__time bg-quote::text").get()
         timezone = response.css("span.timestamp__time::text").getall()[-1]
         price = response.css("h2.intraday__price bg-quote::text").get()
-        priceChange =  response.css("h2.intraday__price sup.character::text").get()
-        percentCahnge = response.css("h2.intraday__price bg-quote::text").get()
-        print("--------------------------------------------------------------------------------------------------------------------",price)
+        priceChange = response.css("h2.intraday__price sup.character::text").get()
+        percentChange = response.css("h2.intraday__price bg-quote::text").get()
+        volume = response.css("div.range__header span.primary::text").get()
+        table_items = response.css("div.region.region--primary ul.list.list--kv.list--col50 li.kv__item "
+                                   "span.primary::text").getall()
+        open = table_items[0]
+        dayLow = table_items[1][:table_items[1].index("-")]
+        dayHigh = table_items[1][table_items[1].index("-")+1:]
+        avgVolume = table_items[15]
+        marketCap = table_items[3]
+        peRatio = table_items[8]
+        eps = table_items[9]
+
+        yield {
+            "tickerSymbol": tickerSymbol,
+            "name": name,
+            "currency": currency,
+            "timestamp": timestamp,
+            "timezone": timezone,
+            "price": price,
+            "priceChange": priceChange,
+            "percentChange": percentChange,
+            "volume": volume,
+            "open": open,
+            "dayLow": dayLow,
+            "dayHigh": dayHigh,
+            "avgVolume": avgVolume,
+            "marketCap": marketCap,
+            "peRatio": peRatio,
+            "eps": eps,
+        }
 
 
