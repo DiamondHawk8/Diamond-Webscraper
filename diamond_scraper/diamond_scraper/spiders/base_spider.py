@@ -21,21 +21,28 @@ class BaseSpider(scrapy.Spider):
 
 
     def parse_market_watch(self, response):
+        # Basic Identifiers
         tickerSymbol = response.css("span.company__ticker::text").get()
         name = response.css("h1.company__name::text").get()
         currency = response.css("h2.intraday__price sup.character::text").get()
+
+        # Market Data
         timestamp = response.css("span.timestamp__time bg-quote::text").get()
         timezone = response.css("span.timestamp__time::text").getall()[-1]
         price = response.css("h2.intraday__price bg-quote::text").get()
         priceChange = response.css("h2.intraday__price sup.character::text").get()
         percentChange = response.css("h2.intraday__price bg-quote::text").get()
+
+        # Trading Data
         volume = response.css("div.range__header span.primary::text").get()
         table_items = response.css("div.region.region--primary ul.list.list--kv.list--col50 li.kv__item "
                                    "span.primary::text").getall()
         open = table_items[0]
         dayLow = table_items[1][:table_items[1].index("-")]
-        dayHigh = table_items[1][table_items[1].index("-")+1:]
+        dayHigh = table_items[1][table_items[1].index("-") + 1:]
         avgVolume = table_items[15]
+
+        # Company Valuation Metrics
         marketCap = table_items[3]
         peRatio = table_items[8]
         eps = table_items[9]
@@ -49,10 +56,10 @@ class BaseSpider(scrapy.Spider):
             "price": price,
             "priceChange": priceChange,
             "percentChange": percentChange,
-            "volume": volume,
             "open": open,
             "dayLow": dayLow,
             "dayHigh": dayHigh,
+            "volume": volume,
             "avgVolume": avgVolume,
             "marketCap": marketCap,
             "peRatio": peRatio,
