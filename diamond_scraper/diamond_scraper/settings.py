@@ -64,11 +64,11 @@ ROBOTSTXT_OBEY = True
 #    "scrapy.extensions.telnet.TelnetConsole": None,
 #}
 
-# Configure item pipelines
-# See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    "diamond_scraper.pipelines.DiamondScraperPipeline": 300,
-#}
+ITEM_PIPELINES = {
+    "diamond_scraper.pipelines.DuplicatesPipeline": 100,
+    "diamond_scraper.pipelines.DiamondScraperPipeline": 300,
+    "diamond_scraper.pipelines.InvalidDataPipeline": 500,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
