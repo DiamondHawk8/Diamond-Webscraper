@@ -14,21 +14,22 @@ class DiamondScraperPipeline:
 
     def process_item(self, item, spider):
 
-        if not isinstance(item, ItemAdapter):
-            adapter = ItemAdapter(item)
-        else:
-            adapter = item
+        adapter = ItemAdapter(item)
 
         for key, value in adapter.items():
             adapter.update({key: value.lower().strip().replace(' ', '_')})
 
-        # Remove leading currency symbol in open and eps (is there a simpler way to do this)
-        currency = adapter['currency']
-        adapter.update({'open': adapter['open'][adapter['open'].index(currency) + 1:]})
-        adapter.update({'eps': adapter['eps'][adapter['eps'].index(currency) + 1:]})
+        # Remove leading currency symbol in open and eps
+        if "currency" in adapter:
+            currency = adapter["currency"]
+            if "open" in adapter and currency in adapter["open"]:
+                adapter["open"] = adapter["open"][adapter["open"].index(currency) + 1:]
+            if "eps" in adapter and currency in adapter["eps"]:
+                adapter["eps"] = adapter["eps"][adapter["eps"].index(currency) + 1:]
 
         # Remove leading 'Volume: ' string in volume value
-        adapter.update({'volume': adapter['volume'][adapter['volume'].index(':') + 2:]})
+        if "volume" in adapter and ":" in adapter["volume"]:
+            adapter["volume"] = adapter["volume"].split(":")[1].strip()
         for key, value in adapter.items():
             print(key, value)
         return dict(adapter)
@@ -40,10 +41,7 @@ class DuplicatesPipeline:
 
     def process_item(self, item, spider):
 
-        if not isinstance(item, ItemAdapter):
-            adapter = ItemAdapter(item)
-        else:
-            adapter = item
+        adapter = ItemAdapter(item)
 
         adapter = ItemAdapter(item)
         if adapter["timestamp"] in self.timestamps_seen:
@@ -56,14 +54,11 @@ class DuplicatesPipeline:
 class InvalidDataPipeline:
     # TODO, expand invalid item logic (check if fields within reasonable range?)
     def process_item(self, item, spider):
-        print("FINAL --------------------------------",item)
-        if not isinstance(item, ItemAdapter):
-            adapter = ItemAdapter(item)
-        else:
-            adapter = item
+
+        adapter = ItemAdapter(item)
 
         for key, value in adapter.items():
-            if key is None or value is None:
+            if value is None or value == "":
                 raise DropItem(f"Invalid item {key}: {value}")
 
         return dict(adapter)
