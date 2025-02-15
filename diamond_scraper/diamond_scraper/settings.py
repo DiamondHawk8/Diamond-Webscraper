@@ -23,6 +23,13 @@ USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
 
+RETRY_ENABLED = True
+# 2 retries for a total of 3 attempts
+RETRY_TIMES = 2
+# Exponential backoff starting at 2 seconds
+RETRY_BACKOFF_BASE = 2
+DOWNLOAD_TIMEOUT = 30
+
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 #CONCURRENT_REQUESTS = 32
 
@@ -41,10 +48,10 @@ ROBOTSTXT_OBEY = True
 #TELNETCONSOLE_ENABLED = False
 
 # Override the default request headers:
-#DEFAULT_REQUEST_HEADERS = {
-#    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-#    "Accept-Language": "en",
-#}
+DEFAULT_REQUEST_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en",
+}
 
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
@@ -78,16 +85,16 @@ FEEDS = {
     }
 }
 
-# Enable and configure the AutoThrottle extension (disabled by default)
-# See https://docs.scrapy.org/en/latest/topics/autothrottle.html
-#AUTOTHROTTLE_ENABLED = True
-# The initial download delay
-#AUTOTHROTTLE_START_DELAY = 5
+AUTOTHROTTLE_ENABLED = True
+
+# Base delay time
+AUTOTHROTTLE_START_DELAY = 5
+
 # The maximum download delay to be set in case of high latencies
-#AUTOTHROTTLE_MAX_DELAY = 60
+AUTOTHROTTLE_MAX_DELAY = 60
 # The average number of requests Scrapy should be sending in parallel to
 # each remote server
-#AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
+AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
 # Enable showing throttling stats for every response received:
 #AUTOTHROTTLE_DEBUG = False
 
@@ -102,3 +109,10 @@ FEEDS = {
 # Set settings whose default value is deprecated to a future-proof value
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
+
+LOG_FILE = "scraper.log"
+LOG_LEVEL = "INFO"
+
+# Caching enabled for development so I dont get throttled
+HTTPCACHE_ENABLED = True
+HTTPCACHE_EXPIRATION_SECS = 3600
