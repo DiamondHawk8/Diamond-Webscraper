@@ -2,7 +2,7 @@
 from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
 import re
-
+import logging
 
 class DiamondScraperPipeline:
     def process_item(self, item, spider):
@@ -25,6 +25,7 @@ class DiamondScraperPipeline:
             adapter["volume"] = adapter["volume"].split(":")[1].strip()
         for key, value in adapter.items():
             print(key, value)
+        spider.logger.info("Items processed")
         return dict(adapter)
 
 
@@ -38,6 +39,7 @@ class DuplicatesPipeline:
 
         adapter = ItemAdapter(item)
         if adapter["timestamp"] in self.timestamps_seen:
+            spider.logger.warning(f"Item timestamp already seen: {adapter['timestamp']}")
             raise DropItem(f"Item timestamp already seen: {adapter['timestamp']}")
         else:
             self.timestamps_seen.add(adapter["timestamp"])
@@ -52,6 +54,7 @@ class InvalidDataPipeline:
 
         for key, value in adapter.items():
             if value is None or value == "":
+                spider.logger.error(f"Invalid item found {key}: {value}")
                 raise DropItem(f"Invalid item {key}: {value}")
 
         return dict(adapter)

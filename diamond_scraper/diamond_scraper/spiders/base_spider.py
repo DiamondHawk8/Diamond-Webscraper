@@ -1,5 +1,5 @@
 import scrapy
-from scrapy.crawler import CrawlerProcess
+import logging
 
 
 class BaseSpider(scrapy.Spider):
@@ -17,6 +17,7 @@ class BaseSpider(scrapy.Spider):
     def start_requests(self):
         for url in self.urls:
             # yield scrapy.Request(url=url, callback=self.parse)
+            self.logger.info(f"Beginning request for url: {url}")
             yield scrapy.Request(url=url, callback=self.parse_market_watch)
 
 
@@ -47,6 +48,7 @@ class BaseSpider(scrapy.Spider):
         peRatio = table_items[8]
         eps = table_items[9]
 
+        self.logger.info("Fields scraped, yielding")
         yield {
             "tickerSymbol": tickerSymbol,
             "name": name,

@@ -98,12 +98,11 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
 # Enable showing throttling stats for every response received:
 #AUTOTHROTTLE_DEBUG = False
 
-# Enable and configure HTTP caching (disabled by default)
-# See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
-#HTTPCACHE_ENABLED = True
-#HTTPCACHE_EXPIRATION_SECS = 0
-#HTTPCACHE_DIR = "httpcache"
-#HTTPCACHE_IGNORE_HTTP_CODES = []
+# TODO turn off after development is done
+HTTPCACHE_ENABLED = True
+HTTPCACHE_EXPIRATION_SECS = 3600
+HTTPCACHE_DIR = "httpcache"
+HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = "scrapy.extensions.httpcache.FilesystemCacheStorage"
 
 # Set settings whose default value is deprecated to a future-proof value
@@ -113,6 +112,3 @@ FEED_EXPORT_ENCODING = "utf-8"
 LOG_FILE = "scraper.log"
 LOG_LEVEL = "INFO"
 
-# Caching enabled for development so I dont get throttled
-HTTPCACHE_ENABLED = True
-HTTPCACHE_EXPIRATION_SECS = 3600
