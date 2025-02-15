@@ -70,6 +70,14 @@ ITEM_PIPELINES = {
     "diamond_scraper.pipelines.DiamondScraperPipeline": 300,
 }
 
+FEEDS = {
+    'data.jl': {
+        'format': 'jsonlines',
+        'encoding': 'utf8',
+        'indent': 4,
+    }
+}
+
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
 #AUTOTHROTTLE_ENABLED = True
