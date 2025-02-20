@@ -4,7 +4,11 @@ from scrapy.exceptions import DropItem
 import re
 import logging
 
-
+"""
+# TODO: 
+- Create a generic class/function that allows for more streamlined statistics logging
+    - Should allow for passing stat names and check logic, and automatically return values and set/inc spider stats
+"""
 class DiamondScraperPipeline:
 
     def __init__(self):
@@ -86,7 +90,12 @@ class InvalidDataPipeline:
         self.items_processed = 0
         self.items_dropped = 0
         self.items_flagged = 0
+
+        # Variables to hold any flagged or dropped item
+
+        # TODO, code must be refactored to track all invalid items that would trigger a drop (see TODO at top of file)
         self.dropped_items = {}
+        self.flagged_items = {}
 
     # TODO, allow for dynamic rules
     VALIDATION_RULES = {
@@ -140,5 +149,16 @@ class InvalidDataPipeline:
         spider.crawler.stats.inc_value("custom/items_dropped", count=self.items_dropped)
         spider.crawler.stats.inc_value("custom/items_flagged", count=self.items_flagged)
 
+        dropped = spider.crawler.stats.get_value("custom/flagged_fields", default=[])
+        for key, value in self.dropped_items.items():
+            dropped.append(value)
+        spider.crawler.stats.set_value("custom/dropped_fields", dropped)
+
+        flagged = spider.crawler.stats.get_value("custom/flagged_fields", default=[])
+        for key, value in self.flagged_items.items():
+            flagged.append({key : value})
+        spider.crawler.stats.set_value("custom/flagged_fields", flagged)
 
 
+def update_stat():
+    pass
