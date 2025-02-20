@@ -7,9 +7,11 @@ import logging
 
 class DiamondScraperPipeline:
 
+    def __init__(self):
+        self.items_processed = 0
+
     # Generalized pipeline for testing and development purposes, will be removed/replaced with modular pipeline
     def process_item(self, item, spider):
-        spider.logger.info("Beginning Diamond Scraper pipeline")
         adapter = ItemAdapter(item)
 
         # Logged after adapter transformation to ensure proper formatting
@@ -31,16 +33,27 @@ class DiamondScraperPipeline:
             adapter["volume"] = adapter["volume"].split(":")[1].strip()
         for key, value in adapter.items():
             print(key, value)
-        spider.logger.info("Items processed")
+        self.items_processed += 1
         return dict(adapter)
+
+    def open_spider(self, spider):
+        spider.logger.info(f"Starting {self.__class__.__name__} validation")
+
+    def close_spider(self, spider):
+        spider.logger.info(f"Finished {self.__class__.__name__} validation")
+        spider.logger.info(f"Items processed: {self.items_processed}")
+
+        spider.crawler.stats.inc_value("custom/items_processed", count=self.items_processed)
 
 
 class DuplicatesPipeline:
     def __init__(self):
         self.timestamps_seen = set()
+        self.items_processed = 0
+        self.items_dropped = 0
+        self.dropped_items = {}
 
     def process_item(self, item, spider):
-        spider.logger.info("Beginning duplicate data check")
         adapter = ItemAdapter(item)
 
         # Logged after adapter transformation to ensure proper formatting
@@ -49,13 +62,31 @@ class DuplicatesPipeline:
         adapter = ItemAdapter(item)
         if adapter["timestamp"] in self.timestamps_seen:
             spider.logger.warning(f"Item timestamp already seen: {adapter['timestamp']}")
+            self.items_dropped += 1
             raise DropItem(f"Item timestamp already seen: {adapter['timestamp']}")
         else:
             self.timestamps_seen.add(adapter["timestamp"])
             return dict(adapter)
 
+    def open_spider(self, spider):
+        spider.logger.info(f"Starting {self.__class__.__name__} validation")
+
+    def close_spider(self, spider):
+        spider.logger.info(f"Finished {self.__class__.__name__} validation")
+        spider.logger.info(f"Items processed: {self.items_processed}")
+        spider.logger.info(f"Duplicate items dropped: {self.items_dropped}")
+
+        spider.crawler.stats.inc_value("custom/items_processed", count=self.items_processed)
+        spider.crawler.stats.inc_value("custom/items_dropped", count=self.items_dropped)
+
+
 
 class InvalidDataPipeline:
+    def __init__(self):
+        self.items_processed = 0
+        self.items_dropped = 0
+        self.items_flagged = 0
+        self.dropped_items = {}
 
     # TODO, allow for dynamic rules
     VALIDATION_RULES = {
@@ -68,7 +99,6 @@ class InvalidDataPipeline:
     }
 
     def process_item(self, item, spider):
-        spider.logger.info(f"Starting InvalidDataPipeline validation")
         adapter = ItemAdapter(item)
 
         # Logged after adapter transformation to ensure proper formatting
@@ -87,8 +117,28 @@ class InvalidDataPipeline:
                         adapter[key] = value
                     except ValueError:
                         spider.logger.error(f"Dropping item - {key}: {value}")
+                        self.items_dropped += 1
                         raise DropItem(f"Invalid numeric value for {key}: {value}")
                 if not self.VALIDATION_RULES[key](value):
                     spider.logger.warning(f"Suspicious value for {key}: {value}")
-
+                    self.items_flagged += 1
+        self.items_processed += 1
         return dict(adapter)
+
+
+    def open_spider(self, spider):
+        spider.logger.info(f"Starting {self.__class__.__name__} validation")
+
+    def close_spider(self, spider):
+        spider.logger.info(f"Finished {self.__class__.__name__} validation")
+        spider.logger.info(f"Items processed: {self.items_processed}")
+        spider.logger.info(f"Items dropped: {self.items_dropped}")
+        spider.logger.info(f"Suspicious items: {self.items_flagged}")
+
+        # Track spider wide statistics
+        spider.crawler.stats.inc_value("custom/items_processed", count=self.items_processed)
+        spider.crawler.stats.inc_value("custom/items_dropped", count=self.items_dropped)
+        spider.crawler.stats.inc_value("custom/items_flagged", count=self.items_flagged)
+
+
+
