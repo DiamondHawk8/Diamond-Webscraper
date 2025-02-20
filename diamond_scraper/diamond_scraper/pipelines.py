@@ -6,9 +6,14 @@ import logging
 
 
 class DiamondScraperPipeline:
+
+    # Generalized pipeline for testing and development purposes, will be removed/replaced with modular pipeline
     def process_item(self, item, spider):
         spider.logger.info("Beginning Diamond Scraper pipeline")
         adapter = ItemAdapter(item)
+
+        # Logged after adapter transformation to ensure proper formatting
+        spider.logger.debug(f"Raw item before {self.__class__.__name__} processing: {dict(adapter)}")
 
         for key, value in adapter.items():
             adapter.update({key: value.lower().strip().replace(' ', '_')})
@@ -38,6 +43,9 @@ class DuplicatesPipeline:
         spider.logger.info("Beginning duplicate data check")
         adapter = ItemAdapter(item)
 
+        # Logged after adapter transformation to ensure proper formatting
+        spider.logger.debug(f"Raw item before {self.__class__.__name__} processing: {dict(adapter)}")
+
         adapter = ItemAdapter(item)
         if adapter["timestamp"] in self.timestamps_seen:
             spider.logger.warning(f"Item timestamp already seen: {adapter['timestamp']}")
@@ -49,6 +57,7 @@ class DuplicatesPipeline:
 
 class InvalidDataPipeline:
 
+    # TODO, allow for dynamic rules
     VALIDATION_RULES = {
         'tickerSymbol': lambda x: 0 < len(x) <= 5,
         'currency': lambda x: len(x) == 1,
@@ -59,11 +68,13 @@ class InvalidDataPipeline:
     }
 
     def process_item(self, item, spider):
-        spider.logger.info("Starting InvalidDataPipeline validation")
+        spider.logger.info(f"Starting InvalidDataPipeline validation")
         adapter = ItemAdapter(item)
 
-        for key, value in adapter.items():
+        # Logged after adapter transformation to ensure proper formatting
+        spider.logger.debug(f"Raw item before {self.__class__.__name__} processing: {dict(adapter)}")
 
+        for key, value in adapter.items():
             # Remove any None or empty values
             if value is None or value == "":
                 raise DropItem(f"Invalid item {key}: {value}")
