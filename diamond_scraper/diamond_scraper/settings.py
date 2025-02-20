@@ -72,9 +72,9 @@ DEFAULT_REQUEST_HEADERS = {
 #}
 
 ITEM_PIPELINES = {
-    "diamond_scraper.pipelines.InvalidDataPipeline": 100,
-    "diamond_scraper.pipelines.DuplicatesPipeline": 200,
-    "diamond_scraper.pipelines.DiamondScraperPipeline": 300,
+    "diamond_scraper.pipelines.DiamondScraperPipeline": 100,
+    "diamond_scraper.pipelines.InvalidDataPipeline": 200,
+    "diamond_scraper.pipelines.DuplicatesPipeline": 300,
 }
 
 FEEDS = {

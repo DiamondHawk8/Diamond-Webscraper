@@ -4,9 +4,10 @@ from scrapy.exceptions import DropItem
 import re
 import logging
 
+
 class DiamondScraperPipeline:
     def process_item(self, item, spider):
-
+        spider.logger.info("Beginning Diamond Scraper pipeline")
         adapter = ItemAdapter(item)
 
         for key, value in adapter.items():
@@ -34,7 +35,7 @@ class DuplicatesPipeline:
         self.timestamps_seen = set()
 
     def process_item(self, item, spider):
-
+        spider.logger.info("Beginning duplicate data check")
         adapter = ItemAdapter(item)
 
         adapter = ItemAdapter(item)
@@ -47,14 +48,36 @@ class DuplicatesPipeline:
 
 
 class InvalidDataPipeline:
-    # TODO, expand invalid item logic (check if fields within reasonable range?)
-    def process_item(self, item, spider):
 
+    VALIDATION_RULES = {
+        'tickerSymbol': lambda x: 0 < len(x) <= 5,
+        'currency': lambda x: len(x) == 1,
+        'price': lambda x: x >= 0,
+        'volume': lambda x: x >= 0,
+        'peRatio': lambda x: x > 0,
+        'eps': lambda x: x >= 0,
+    }
+
+    def process_item(self, item, spider):
+        spider.logger.info("Starting InvalidDataPipeline validation")
         adapter = ItemAdapter(item)
 
         for key, value in adapter.items():
+
+            # Remove any None or empty values
             if value is None or value == "":
-                spider.logger.error(f"Invalid item found {key}: {value}")
                 raise DropItem(f"Invalid item {key}: {value}")
+
+            if key in self.VALIDATION_RULES:
+                # Numerically convert any
+                if key in ['price', 'volume', 'peRatio', 'eps']:
+                    try:
+                        value = float(value)
+                        adapter[key] = value
+                    except ValueError:
+                        spider.logger.error(f"Dropping item - {key}: {value}")
+                        raise DropItem(f"Invalid numeric value for {key}: {value}")
+                if not self.VALIDATION_RULES[key](value):
+                    spider.logger.warning(f"Suspicious value for {key}: {value}")
 
         return dict(adapter)
