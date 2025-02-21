@@ -4,11 +4,7 @@ from scrapy.exceptions import DropItem
 import re
 import logging
 
-"""
-# TODO: 
-- Create a generic class/function that allows for more streamlined statistics logging
-    - Should allow for passing stat names and check logic, and automatically return values and set/inc spider stats
-"""
+
 class DiamondScraperPipeline:
 
     def __init__(self):
@@ -84,7 +80,6 @@ class DuplicatesPipeline:
         spider.crawler.stats.inc_value("custom/items_dropped", count=self.items_dropped)
 
 
-
 class InvalidDataPipeline:
     def __init__(self):
         self.items_processed = 0
@@ -93,7 +88,7 @@ class InvalidDataPipeline:
 
         # Variables to hold any flagged or dropped item
 
-        # TODO, code must be refactored to track all invalid items that would trigger a drop (see TODO at top of file)
+        # TODO, code must be refactored to track all invalid items that would trigger a drop
         self.dropped_items = {}
         self.flagged_items = {}
 
@@ -134,7 +129,6 @@ class InvalidDataPipeline:
         self.items_processed += 1
         return dict(adapter)
 
-
     def open_spider(self, spider):
         spider.logger.info(f"Starting {self.__class__.__name__} validation")
 
@@ -156,45 +150,5 @@ class InvalidDataPipeline:
 
         flagged = spider.crawler.stats.get_value("custom/flagged_fields", default=[])
         for key, value in self.flagged_items.items():
-            flagged.append({key : value})
+            flagged.append({key: value})
         spider.crawler.stats.set_value("custom/flagged_fields", flagged)
-
-
-class StatTracker:
-    def __init__(self, spider, enable_logging = False, pipline_name = None, logging_rules = None):
-        self.spider = spider
-
-        # Determines if the class will handle logging itself
-        self.enable_logging = enable_logging
-        self.pipline_name = pipline_name
-
-        default_logging_rules = {}
-        if logging_rules:
-            # TODO allow for partially filled provided rules that are substituted with default where blank
-            self.logging_rules = logging_rules
-
-    # Method for incrementing stat by given amount
-    def increment_stat(self, stat_name: str, value: int = 1):
-        pass
-
-    # Method for appending to a given stat
-    def append_to_stat(self, stat_name: str, data: dict | list):
-        pass
-
-    # Method for getting a stat
-    def get_stat(self, stat_name: str, default=None):
-        pass
-
-    # Determines whether an item should be dropped based on failed rules.
-    def should_drop_item(self, failed_validations: dict) -> bool:
-        # TODO allow for thresholds
-        pass
-
-    def log_validation_results(self, failed_validations: dict, log_level="warning"):
-        # TODO, allow finer control over logging levels
-        pass
-
-    # returns failed validations
-    def validate_item(self, item: dict, rules: dict[str, callable]) -> dict:
-        # TODO, allow for universal rules to be defined and rules that apply to specific keys
-        pass
