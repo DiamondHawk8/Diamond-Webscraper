@@ -25,7 +25,7 @@ class StatTracker:
             "ITEM_INPUT": {"log": True, "level": "debug", "store": False},  # Raw item input
             "ITEM_OUTPUT": {"log": True, "level": "debug", "store": False},  # Processed item output
             "FLAGGED_ITEMS": {"log": True, "level": "debug", "store": True},  # Track flagged items
-            "DROPPED_ITEMS": {"log": Txrue, "level": "debug", "store": True},  # Track dropped items
+            "DROPPED_ITEMS": {"log": True, "level": "debug", "store": True},  # Track dropped items
         }
 
         THRESHOLD_RULES = {
