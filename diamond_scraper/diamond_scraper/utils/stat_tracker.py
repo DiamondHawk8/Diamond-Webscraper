@@ -111,65 +111,44 @@ class StatTracker:
         adapter = ItemAdapter(item)
         failed_validations = {}
 
+        # Helper function to process validation results
+        def _process_validation_result(field, result):
+            """
+            Handles different validation result types and updates item accordingly.
+            """
+            if isinstance(result, tuple):
+                is_valid, new_value = result
+                if is_valid:
+                    adapter[field] = new_value  # Modify value if rule allows
+                else:
+                    failed_validations[field] = adapter[field]
+            elif isinstance(result, bool):
+                if not result:
+                    failed_validations[field] = adapter[field]
+            else:
+                raise ValueError(f"Invalid return type from validation rule for {field}")
 
+        # Apply validation rules to each field
         for key, value in adapter.items():
-            if key in rules:
-                try:
-
-                    # Apply default rules if enabled
+            try:
+                if key in rules:
+                    # Apply all default rules if enabled
                     if use_universal_default_rules:
-                        # Apply all default rules to a given field
                         for function in self.default_rules.values():
-                            result = function(value)
+                            _process_validation_result(key, function(value))
 
-                            if isinstance(result, tuple):
-                                is_valid, new_value = result
-                                if is_valid:
-                                    adapter[key] = new_value  # Modify value if rule allows
-                                else:
-                                    failed_validations[key] = value
-                            elif isinstance(result, bool):
-                                if not result:
-                                    failed_validations[key] = value
-                            else:
-                                raise ValueError(f"Invalid return type from validation rule for {key}")
+                    # Apply custom rules
+                    _process_validation_result(key, rules[key](value))
 
+                # Apply all default rules only if they are not ignored and no custom rule exists
+                elif not use_universal_default_rules and not ignore_defaults:
+                    for function in self.default_rules.values():
+                        _process_validation_result(key, function(value))
 
+            except Exception as e:
+                self.spider.logger.error(f"Error validating item {key}: {value}, Exception: {e}")
+                failed_validations[key] = value  # Treat validation failure as failed if exception occurs
 
-                    result = rules[key](value)  # Expecting either (bool) or (bool, new_value)
-
-                    if isinstance(result, tuple):
-                        is_valid, new_value = result
-                        if is_valid:
-                            adapter[key] = new_value  # Modify value if rule allows
-                        else:
-                            failed_validations[key] = value
-                    elif isinstance(result, bool):
-                        if not result:
-                            failed_validations[key] = value
-                    else:
-                        raise ValueError(f"Invalid return type from validation rule for {key}")
-
-                except Exception as e:
-                    self.spider.logger.error(f"Error validating item {key}: {value}, Exception: {e}")
-                    failed_validations[key] = value  # Treat validation failure as failed if exception occurs
-            elif not use_universal_default_rules and not ignore_defaults:
-
-                # Apply all default rules to a given field
-                for function in self.default_rules.values():
-                    result = function(value)
-
-                    if isinstance(result, tuple):
-                        is_valid, new_value = result
-                        if is_valid:
-                            adapter[key] = new_value  # Modify value if rule allows
-                        else:
-                            failed_validations[key] = value
-                    elif isinstance(result, bool):
-                        if not result:
-                            failed_validations[key] = value
-                    else:
-                        raise ValueError(f"Invalid return type from validation rule for {key}")
         return failed_validations
 
     """
