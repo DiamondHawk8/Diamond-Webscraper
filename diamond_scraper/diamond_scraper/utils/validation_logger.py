@@ -3,7 +3,7 @@ from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
 
 class ValidationLogger:
-    def __init__(self, spider, enable_logging=False, pipline_name=None, logging_rules=None, default_rules=None):
+    def __init__(self, spider, enable_logging=False, pipline_name=None, logging_rules=None, threshold_rules=None, default_rules=None):
         self.spider = spider
 
         # Determines if the class will handle logging itself
@@ -19,10 +19,11 @@ class ValidationLogger:
         # Default rules for logging behavior (log level and storage settings)
         DEFAULT_LOGGING_RULES = {
             # Validation Events
-            "FIELD_FAILURE": {"log": False, "level": "warning", "store": False},  # A field fails validation
-            "ITEM_FAILURE": {"log": True, "level": "error", "store": True},  # An entire item fails validation
-            "FIELD_FLAGGED": {"log": True, "level": "warning", "store": True},  # A field is flagged
-            "ITEM_DROPPED": {"log": True, "level": "error", "store": True},  # The item is dropped
+
+            "FIELD_FAILURE": {"log": False, "level": "warning"},  # A field fails validation
+            "ITEM_FAILURE": {"log": True, "level": "error"},  # An item fails validation
+            "FIELD_FLAGGED": {"log": True, "level": "warning"},  # A field is flagged
+            "ITEM_DROPPED": {"log": True, "level": "error"},  # The item is dropped
 
             # Statistics Events
             "TOTAL_FLAGGED": {"log": True, "level": "info", "store": True},  # Tracks total flagged fields
@@ -35,7 +36,7 @@ class ValidationLogger:
             "DROPPED_ITEMS": {"log": True, "level": "debug", "store": True},  # Stores dropped items
         }
 
-        # Defines thresholds for validation failures before item is dropped
+        # Defines thresholds for validation failures before item is dropped, set value to None to never drop items
         THRESHOLD_RULES = {
             "FAILURE_THRESHOLD": 0,  # Minimum number of failed fields before dropping item
             "FLAG_THRESHOLD": 3,  # Minimum number of flagged fields before dropping item
@@ -54,6 +55,40 @@ class ValidationLogger:
                 self.logging_rules = DEFAULT_LOGGING_RULES
         else:
             self.logging_rules = None
+
+        if threshold_rules:
+            # Validate custom rules to ensure only allowed keys are overridden
+            for key in threshold_rules:
+                if key not in DEFAULT_LOGGING_RULES:
+                    raise KeyError(f"Invalid threshold rule: {key}")
+
+                # Merge default threshold rules with user-defined rules
+                self.threshold_rules = {**THRESHOLD_RULES, **threshold_rules}
+        else:
+            self.threshold_rules = THRESHOLD_RULES
+
+
+
+    def process_item(self, item: dict, rules: dict[str, callable]) -> dict:
+        """
+        High-level flow method that:
+          1. Validates the item
+          2. Logs flagged/invalid values based on settings
+          3. Decides whether to drop the item
+          4. Returns cleaned item or raises DropItem
+
+        :param item: The scraped item dictionary
+        :param rules: Validation rules to apply
+        :return: Cleaned item if valid, raises DropItem if not
+        """
+        validation_results = self.validate_item(item, rules)
+
+        self.log_validation_results(validation_results)
+
+        if self.should_drop_item(validation_results["invalid"]):
+            raise DropItem(f"Dropping item due to invalid values: {validation_results['invalid']}")
+
+        return item
 
     # Increments a Scrapy stat by a given amount
     def increment_stat(self, stat_name: str, value: int = 1):
@@ -75,18 +110,59 @@ class ValidationLogger:
         """
         pass  # TODO: Implement retrieval of stored statistics
 
-    # Determines whether an item should be dropped based on failed rules.
+    # Determines whether an item should be dropped based on failed rules and will log or store accordingly
     def should_drop_item(self, failed_validations: dict) -> bool:
         """
         Determines if an item should be dropped based on threshold rules.
         Checks both failure and flag count thresholds.
         """
-        pass  # TODO: Count the number of failed and flagged fields, compare to thresholds
+        flagged_values = failed_validations.get("flagged")
+        invalid_values = failed_validations.get("invalid")
+        num_flagged_items = len(flagged_values)
+        num_invalid_items = len(invalid_values)
+
+        # TODO fix my terrible formatting
+
+        if num_flagged_items > 0 or num_invalid_items > 0:
+
+            # Log that item has failed validation if any errors occur
+            if self.enable_logging and self.logging_rules["ITEM_FAILURE"]["log"]:
+                self.spider.logger.warning(f"Item has failed validation with {num_flagged_items} flagged items "
+                                           f"and {num_invalid_items} invalid items.")
+
+            # If the threshold exists and if the threshold is violated
+            if ((self.threshold_rules["FLAG_THRESHOLD"] and
+                 num_flagged_items > self.threshold_rules["FLAG_THRESHOLD"])
+                    or (self.threshold_rules["FAILURE_THRESHOLD"] and
+                        num_invalid_items > self.threshold_rules["FAILURE_THRESHOLD"])):
+
+                # If logging is enabled and if items being dropped should be logged
+                if self.enable_logging and self.logging_rules["ITEM_DROPPED"]["log"]:
+                    self.spider.logger.error(f"Item exceeded flagged threshold of "
+                                             f"{self.threshold_rules['FLAG_THRESHOLD']}, and failure threshold of "
+                                             f"{self.threshold_rules['FAILURE_THRESHOLD']} with value of "
+                                             f"{num_flagged_items} flagged items and {num_invalid_items} "
+                                             f"invalid items.")
+
+                # If logging is enabled and if items being dropped should be stored
+
+
+            # If logging is enabled and the total values that were flagged should be logged
+
+            # if logging is enabled and the total values that failed should be logged
+
+            # if logging is enabled and the total values that were flagged should be stored
+
+            # if logging is enabled and the total values that failed should be logged
+
+
+
+        pass
 
     def log_validation_results(self, failed_validations: dict, logging_rules=None):
         """
         Logs failed validations according to predefined logging behavior.
-        Uses logging level rules to distinguish between warnings and errors.
+        Updates spider statistics according to predefined store behavior.
         """
         pass  # TODO: Iterate through failed fields, determine log levels, log appropriately
 
@@ -179,10 +255,3 @@ class StatEnum(Enum):
 
     # Placeholder for custom user-defined stats
     CUSTOM = "custom/user_defined"
-
-
-class LoggingEnum(Enum):
-    INFO = "info"
-    WARNING = "warning"
-    ERROR = "error"
-    DEBUG = "debug"
