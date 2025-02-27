@@ -1,86 +1,181 @@
 from enum import Enum
-
+from itemadapter import ItemAdapter
+from scrapy.exceptions import DropItem
 
 class StatTracker:
-    def __init__(self, spider, enable_logging=False, pipline_name=None, logging_rules=None):
+    def __init__(self, spider, enable_logging=False, pipline_name=None, logging_rules=None, default_rules=None):
         self.spider = spider
 
         # Determines if the class will handle logging itself
         self.enable_logging = enable_logging
         self.pipline_name = pipline_name
-        
-        
+
+
+        # Would it be better to enable the default rules automatically, or have that be something users opt into?
+        # I can see situations where it would be annoying to have to turn of my custom rules every time
+        # TODO create default rules
+        DEFAULT_RULES = {
+
+        }
+        if not default_rules:
+            self.default_rules = DEFAULT_RULES
+
+        # Default rules for logging behavior (log level and storage settings)
         DEFAULT_LOGGING_RULES = {
-            # Validation
-            "FIELD_FAILURE": {"log": False, "level": "warning", "store": False},  # Field validation failure
-            "ITEM_FAILURE": {"log": True, "level": "error", "store": True},  # Entire item validation failure
-            "FIELD_FLAGGED": {"log": True, "level": "warning", "store": True},  # Field flagged
-            "ITEM_DROPPED": {"log": True, "level": "error", "store": True},  # Item dropped
+            # Validation Events
+            "FIELD_FAILURE": {"log": False, "level": "warning", "store": False},  # A field fails validation
+            "ITEM_FAILURE": {"log": True, "level": "error", "store": True},  # An entire item fails validation
+            "FIELD_FLAGGED": {"log": True, "level": "warning", "store": True},  # A field is flagged
+            "ITEM_DROPPED": {"log": True, "level": "error", "store": True},  # The item is dropped
 
-            # Statistics
-            "TOTAL_FLAGGED": {"log": True, "level": "info", "store": True},  # Total flagged fields
-            "TOTAL_DROPPED": {"log": True, "level": "info", "store": True},  # Total dropped items
+            # Statistics Events
+            "TOTAL_FLAGGED": {"log": True, "level": "info", "store": True},  # Tracks total flagged fields
+            "TOTAL_DROPPED": {"log": True, "level": "info", "store": True},  # Tracks total dropped items
 
-            # Data Debugging
-            "ITEM_INPUT": {"log": True, "level": "debug", "store": False},  # Raw item input
-            "ITEM_OUTPUT": {"log": True, "level": "debug", "store": False},  # Processed item output
-            "FLAGGED_ITEMS": {"log": True, "level": "debug", "store": True},  # Track flagged items
-            "DROPPED_ITEMS": {"log": True, "level": "debug", "store": True},  # Track dropped items
+            # Data Debugging Events
+            "ITEM_INPUT": {"log": True, "level": "debug", "store": False},  # Raw item before processing
+            "ITEM_OUTPUT": {"log": True, "level": "debug", "store": False},  # Processed item after validation
+            "FLAGGED_ITEMS": {"log": True, "level": "debug", "store": True},  # Stores flagged items
+            "DROPPED_ITEMS": {"log": True, "level": "debug", "store": True},  # Stores dropped items
         }
 
+        # Defines thresholds for validation failures before item is dropped
         THRESHOLD_RULES = {
-            # How many fields of an item need to fail validation before the entire item is dropped
-            "FAILURE_THRESHOLD": 0,
-
-            # How many fields of an item need to be flagged before the entire item is dropped
-            "FLAG_THRESHOLD": 3,
-
+            "FAILURE_THRESHOLD": 0,  # Minimum number of failed fields before dropping item
+            "FLAG_THRESHOLD": 3,  # Minimum number of flagged fields before dropping item
         }
-
 
         if self.enable_logging:
             if logging_rules:
-                # Validate keys before applying custom rules
+                # Validate custom rules to ensure only allowed keys are overridden
                 for key in logging_rules:
                     if key not in DEFAULT_LOGGING_RULES:
                         raise KeyError(f"Invalid logging rule: {key}")
 
-                # Merge default rules with custom rules
+                # Merge default logging rules with user-defined rules
                 self.logging_rules = {**DEFAULT_LOGGING_RULES, **logging_rules}
             else:
                 self.logging_rules = DEFAULT_LOGGING_RULES
         else:
             self.logging_rules = None
 
-    # Method for incrementing stat by given amount
+    # Increments a Scrapy stat by a given amount
     def increment_stat(self, stat_name: str, value: int = 1):
-        self.spider.crawler.stats.inc_value("custom/items_flagged", count=value)
+        self.spider.crawler.stats.inc_value(stat_name, count=value)
 
     # Method for appending to a given stat
     def append_to_stat(self, stat_name: str, data: dict | list):
-        pass
+        """
+        Stores non-integer statistics such as flagged/dropped items.
+        Ensures previous values are retained instead of overwritten.
+        """
+        pass  # TODO: Retrieve existing data, append new entry, and store it back
 
     # Method for getting a stat
     def get_stat(self, stat_name: str, default=None):
-        # Assuming this method is being used, the statistics being tracked are most likely user defined
-
-        pass
+        """
+        Fetches the current value of a tracked statistic.
+        Used to retrieve statistics stored across different pipelines.
+        """
+        pass  # TODO: Implement retrieval of stored statistics
 
     # Determines whether an item should be dropped based on failed rules.
     def should_drop_item(self, failed_validations: dict) -> bool:
-        # TODO allow for thresholds
-        pass
+        """
+        Determines if an item should be dropped based on threshold rules.
+        Checks both failure and flag count thresholds.
+        """
+        pass  # TODO: Count the number of failed and flagged fields, compare to thresholds
 
     def log_validation_results(self, failed_validations: dict, logging_rules=None):
-        # TODO, allow finer control over logging levels based upon
-        pass
+        """
+        Logs failed validations according to predefined logging behavior.
+        Uses logging level rules to distinguish between warnings and errors.
+        """
+        pass  # TODO: Iterate through failed fields, determine log levels, log appropriately
 
-    # returns a dict of item components that failed validations
-    def validate_item(self, item: dict, rules: dict[str, callable]) -> dict:
-        # TODO, allow for universal rules to be defined and rules that apply to specific keys
-        pass
+    def validate_item(self, item: dict, rules: dict[str, callable], use_universal_default_rules=True,
+                      ignore_defaults=False) -> dict:
+        """
+        Applies field validation rules dynamically and returns a dictionary
+        containing fields that failed validation.
 
-    # method for implementing custom logging logic
+        :param item: dict of items scraped
+        :param rules: dict where keys are field names and values are validation callables
+                Callables must return either bool or (bool, new_value)
+        :param use_universal_default_rules: If True, applies default rules to all fields
+                If False, applies to fields not in `rules`
+        :param ignore_defaults: If True, skips default rules entirely
+        :return: Dict containing failed validations and modified values (if applicable)
+        """
+        adapter = ItemAdapter(item)
+        failed_validations = {}
+
+
+        for key, value in adapter.items():
+            if key in rules:
+                try:
+
+                    # Apply default rules if enabled
+                    if use_universal_default_rules:
+                        # Apply all default rules to a given field
+                        for function in self.default_rules.values():
+                            result = function(value)
+
+                            if isinstance(result, tuple):
+                                is_valid, new_value = result
+                                if is_valid:
+                                    adapter[key] = new_value  # Modify value if rule allows
+                                else:
+                                    failed_validations[key] = value
+                            elif isinstance(result, bool):
+                                if not result:
+                                    failed_validations[key] = value
+                            else:
+                                raise ValueError(f"Invalid return type from validation rule for {key}")
+
+
+
+                    result = rules[key](value)  # Expecting either (bool) or (bool, new_value)
+
+                    if isinstance(result, tuple):
+                        is_valid, new_value = result
+                        if is_valid:
+                            adapter[key] = new_value  # Modify value if rule allows
+                        else:
+                            failed_validations[key] = value
+                    elif isinstance(result, bool):
+                        if not result:
+                            failed_validations[key] = value
+                    else:
+                        raise ValueError(f"Invalid return type from validation rule for {key}")
+
+                except Exception as e:
+                    self.spider.logger.error(f"Error validating item {key}: {value}, Exception: {e}")
+                    failed_validations[key] = value  # Treat validation failure as failed if exception occurs
+            elif not use_universal_default_rules and not ignore_defaults:
+
+                # Apply all default rules to a given field
+                for function in self.default_rules.values():
+                    result = function(value)
+
+                    if isinstance(result, tuple):
+                        is_valid, new_value = result
+                        if is_valid:
+                            adapter[key] = new_value  # Modify value if rule allows
+                        else:
+                            failed_validations[key] = value
+                    elif isinstance(result, bool):
+                        if not result:
+                            failed_validations[key] = value
+                    else:
+                        raise ValueError(f"Invalid return type from validation rule for {key}")
+        return failed_validations
+
+    """
+    Logs an event based on the logging rules configuration.
+    Also determines whether the event should be stored in Scrapy stats based upon the "store" key.
+    """
     def log_event(self, event, message):
         rule = self.logging_rules.get(event, {"enabled": False, "level": "info", "store": False})
 
@@ -112,6 +207,3 @@ class LoggingEnum(Enum):
     WARNING = "warning"
     ERROR = "error"
     DEBUG = "debug"
-
-
-
