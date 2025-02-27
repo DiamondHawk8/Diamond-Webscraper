@@ -10,15 +10,11 @@ class ValidationLogger:
         self.enable_logging = enable_logging
         self.pipline_name = pipline_name
 
-
-        # Would it be better to enable the default rules automatically, or have that be something users opt into?
-        # I can see situations where it would be annoying to have to turn of my custom rules every time
-        # TODO create default rules
-        DEFAULT_RULES = {
-
-        }
+        # Default rules are expected to be defined by the user in dict[str, callable] format
         if not default_rules:
-            self.default_rules = DEFAULT_RULES
+            self.default_rules = {}
+        else:
+            self.default_rules = default_rules
 
         # Default rules for logging behavior (log level and storage settings)
         DEFAULT_LOGGING_RULES = {
@@ -94,8 +90,7 @@ class ValidationLogger:
         """
         pass  # TODO: Iterate through failed fields, determine log levels, log appropriately
 
-    def validate_item(self, item: dict, rules: dict[str, callable], use_universal_default_rules=True,
-                      ignore_defaults=False) -> dict:
+    def validate_item(self, item: dict, rules: dict[str, callable], use_universal_default_rules=True) -> dict:
         """
         Applies field validation rules dynamically and returns a dictionary
         containing fields that failed validation.
@@ -105,7 +100,6 @@ class ValidationLogger:
                 Callables must return either bool or (bool, new_value)
         :param use_universal_default_rules: If True, applies default rules to all fields
                 If False, applies to fields not in `rules`
-        :param ignore_defaults: If True, skips default rules entirely
         :return: Dict containing failed validations and modified values (if applicable)
         """
         adapter = ItemAdapter(item)
@@ -144,7 +138,7 @@ class ValidationLogger:
                     _process_validation_result(key, rules[key](value))
 
                 # Apply default rules if they are not ignored and no custom rule exists
-                elif not use_universal_default_rules and not ignore_defaults:
+                elif not use_universal_default_rules:
                     for function in self.default_rules.values():
                         _process_validation_result(key, function(value))
 
