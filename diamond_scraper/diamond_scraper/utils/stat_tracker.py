@@ -109,22 +109,26 @@ class StatTracker:
         :return: Dict containing failed validations and modified values (if applicable)
         """
         adapter = ItemAdapter(item)
-        failed_validations = {}
+        flagged_values = {}
+        invalid_values = {}
 
         # Helper function to process validation results
         def _process_validation_result(field, result):
             """
-            Handles different validation result types and updates item accordingly.
+            Determines whether a field is clean, suspicious, or invalid.
+            - result must be either (is_valid, new_value) or just a boolean.
             """
             if isinstance(result, tuple):
                 is_valid, new_value = result
-                if is_valid:
-                    adapter[field] = new_value  # Modify value if rule allows
+                if is_valid is None:
+                    flagged_values[field] = adapter[field]  # Suspicious but not invalid
+                elif not is_valid:
+                    invalid_values[field] = adapter[field]  # Invalid and should be dropped
                 else:
-                    failed_validations[field] = adapter[field]
+                    adapter[field] = new_value  # Valid and can be cleaned
             elif isinstance(result, bool):
                 if not result:
-                    failed_validations[field] = adapter[field]
+                    invalid_values[field] = adapter[field]  # Invalid field
             else:
                 raise ValueError(f"Invalid return type from validation rule for {field}")
 
@@ -132,24 +136,26 @@ class StatTracker:
         for key, value in adapter.items():
             try:
                 if key in rules:
-                    # Apply all default rules if enabled
+                    # Apply default rules if enabled
                     if use_universal_default_rules:
                         for function in self.default_rules.values():
                             _process_validation_result(key, function(value))
 
-                    # Apply custom rules
                     _process_validation_result(key, rules[key](value))
 
-                # Apply all default rules only if they are not ignored and no custom rule exists
+                # Apply default rules if they are not ignored and no custom rule exists
                 elif not use_universal_default_rules and not ignore_defaults:
                     for function in self.default_rules.values():
                         _process_validation_result(key, function(value))
 
             except Exception as e:
                 self.spider.logger.error(f"Error validating item {key}: {value}, Exception: {e}")
-                failed_validations[key] = value  # Treat validation failure as failed if exception occurs
+                invalid_values[key] = value  # Treat validation failure as failed if exception occurs
 
-        return failed_validations
+        return {"flagged": flagged_values, "invalid": invalid_values}
+
+
+
 
     """
     Logs an event based on the logging rules configuration.
