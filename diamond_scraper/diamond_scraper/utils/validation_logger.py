@@ -2,8 +2,10 @@ from enum import Enum
 from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
 
+
 class ValidationLogger:
-    def __init__(self, spider, enable_logging=False, pipline_name=None, logging_rules=None, threshold_rules=None, default_rules=None):
+    def __init__(self, spider, enable_logging=False, pipline_name=None, logging_rules=None, threshold_rules=None,
+                 default_rules=None):
         self.spider = spider
 
         # Determines if the class will handle logging itself
@@ -59,15 +61,13 @@ class ValidationLogger:
         if threshold_rules:
             # Validate custom rules to ensure only allowed keys are overridden
             for key in threshold_rules:
-                if key not in DEFAULT_LOGGING_RULES:
+                if key not in THRESHOLD_RULES:
                     raise KeyError(f"Invalid threshold rule: {key}")
 
                 # Merge default threshold rules with user-defined rules
                 self.threshold_rules = {**THRESHOLD_RULES, **threshold_rules}
         else:
             self.threshold_rules = THRESHOLD_RULES
-
-
 
     def process_item(self, item: dict, rules: dict[str, callable]) -> dict:
         """
@@ -114,38 +114,35 @@ class ValidationLogger:
     def should_drop_item(self, failed_validations: dict) -> bool:
         """
         Determines if an item should be dropped based on threshold rules.
-        Checks both failure and flag count thresholds.
+        Logs flagged/invalid counts and drops the item if thresholds are exceeded.
         """
-        flagged_values = failed_validations.get("flagged")
-        invalid_values = failed_validations.get("invalid")
+        flagged_values = failed_validations.get("flagged", {})
+        invalid_values = failed_validations.get("invalid", {})
+
         num_flagged_items = len(flagged_values)
         num_invalid_items = len(invalid_values)
 
-        # TODO fix my terrible formatting
+        # If the item has flagged or invalid fields, log it
+        if (num_flagged_items > 0 or num_invalid_items > 0) and self.enable_logging:
+            if self.logging_rules.get("ITEM_FAILURE", {}).get("log", False):
+                self.spider.logger.warning(
+                    f"Item failed validation with {num_flagged_items} flagged fields and {num_invalid_items} invalid "
+                    f"fields."
+                )
 
-        if num_flagged_items > 0 or num_invalid_items > 0:
+        # Check if thresholds for dropping are exceeded
+        exceeds_flag_threshold = (0 < self.threshold_rules["FLAG_THRESHOLD"] < num_flagged_items)
+        exceeds_failure_threshold = (0 < self.threshold_rules["FAILURE_THRESHOLD"] < num_invalid_items)
 
-            # Log that item has failed validation if any errors occur
-            if self.enable_logging and self.logging_rules["ITEM_FAILURE"]["log"]:
-                self.spider.logger.warning(f"Item has failed validation with {num_flagged_items} flagged items "
-                                           f"and {num_invalid_items} invalid items.")
-
-            # If the threshold exists and if the threshold is violated
-            if ((self.threshold_rules["FLAG_THRESHOLD"] and
-                 num_flagged_items > self.threshold_rules["FLAG_THRESHOLD"])
-                    or (self.threshold_rules["FAILURE_THRESHOLD"] and
-                        num_invalid_items > self.threshold_rules["FAILURE_THRESHOLD"])):
-
-                # If logging is enabled and if items being dropped should be logged
-                if self.enable_logging and self.logging_rules["ITEM_DROPPED"]["log"]:
-                    self.spider.logger.error(f"Item exceeded flagged threshold of "
-                                             f"{self.threshold_rules['FLAG_THRESHOLD']}, and failure threshold of "
-                                             f"{self.threshold_rules['FAILURE_THRESHOLD']} with value of "
-                                             f"{num_flagged_items} flagged items and {num_invalid_items} "
-                                             f"invalid items.")
+        if exceeds_flag_threshold or exceeds_failure_threshold:
+            if self.enable_logging and self.logging_rules.get("ITEM_DROPPED", {}).get("log", False):
+                self.spider.logger.error(
+                    f"Item dropped due to exceeding thresholds - "
+                    f"Flagged: {num_flagged_items}/{self.threshold_rules['FLAG_THRESHOLD']}, "
+                    f"Invalid: {num_invalid_items}/{self.threshold_rules['FAILURE_THRESHOLD']}."
+                )
 
                 # If logging is enabled and if items being dropped should be stored
-
 
             # If logging is enabled and the total values that were flagged should be logged
 
@@ -154,8 +151,6 @@ class ValidationLogger:
             # if logging is enabled and the total values that were flagged should be stored
 
             # if logging is enabled and the total values that failed should be logged
-
-
 
         pass
 
@@ -225,13 +220,11 @@ class ValidationLogger:
         return {"flagged": flagged_values, "invalid": invalid_values}
 
 
-
-
-    """
-    Logs an event based on the logging rules configuration.
-    Also determines whether the event should be stored in Scrapy stats based upon the "store" key.
-    """
     def log_event(self, event, message):
+        """
+            Logs an event based on the logging rules configuration.
+            Also determines whether the event should be stored in Scrapy stats based upon the "store" key.
+        """
         rule = self.logging_rules.get(event, {"enabled": False, "level": "info", "store": False})
 
         if rule["enabled"]:
