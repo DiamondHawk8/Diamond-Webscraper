@@ -89,11 +89,16 @@ class ValidationLogger:
 
         return item
 
-    # Increments a Scrapy stat by a given amount
+    def get_stat(self, stat_name: str):
+        """
+        Fetches the current value of a tracked statistic.
+        Used to retrieve statistics stored across different pipelines.
+        """
+        return self.spider.crawler.stats.get_value(stat_name)
+
     def increment_stat(self, stat_name: str, value: int = 1):
         self.spider.crawler.stats.inc_value(stat_name, count=value)
 
-    # Method for appending to a given stat
     def append_to_stat(self, stat_name: str, data: dict):
         """
         Stores non-integer statistics such as flagged/dropped items.
@@ -106,65 +111,6 @@ class ValidationLogger:
             self.spider.crawler.stats.set_value(stat_name, existing_stat)
         else:
             self.spider.crawler.stats.set_value(stat_name, [data])
-
-    def get_stat(self, stat_name: str):
-        """
-        Fetches the current value of a tracked statistic.
-        Used to retrieve statistics stored across different pipelines.
-        """
-        return self.spider.crawler.stats.get_value(stat_name)
-
-    def should_drop_item(self, failed_validations: dict) -> bool:
-        """
-        Determines if an item should be dropped based on threshold rules.
-        Logs flagged/invalid counts and drops the item if thresholds are exceeded.
-        Additionally, this method handles the bulk of the logging
-        """
-        drop = False
-
-        flagged_values = failed_validations.get("flagged", {})
-        invalid_values = failed_validations.get("invalid", {})
-
-        num_flagged_items = len(flagged_values)
-        num_invalid_items = len(invalid_values)
-
-        # If the item has flagged or invalid fields, log it
-        if (num_flagged_items > 0 or num_invalid_items > 0) and self.enable_logging:
-            if self.logging_rules.get("ITEM_FAILURE", {}).get("log", False):
-                self.spider.logger.warning(
-                    f"Item failed validation with {num_flagged_items} flagged fields and {num_invalid_items} invalid "
-                    f"fields."
-                )
-
-        # Check if thresholds for dropping are exceeded
-        exceeds_flag_threshold = (0 < self.threshold_rules["FLAG_THRESHOLD"] < num_flagged_items)
-        exceeds_failure_threshold = (0 < self.threshold_rules["FAILURE_THRESHOLD"] < num_invalid_items)
-
-        if exceeds_flag_threshold or exceeds_failure_threshold:
-            drop = True
-
-            if self.enable_logging and self.logging_rules.get("ITEM_DROPPED", {}).get("log", False):
-                self.spider.logger.error(
-                    f"Item dropped due to exceeding thresholds - "
-                    f"Flagged: {num_flagged_items}/{self.threshold_rules['FLAG_THRESHOLD']}, "
-                    f"Invalid: {num_invalid_items}/{self.threshold_rules['FAILURE_THRESHOLD']}."
-                )
-
-        if self.enable_logging:
-            if self.logging_rules.get("TOTAL_FLAGGED", {}).get("log", False):
-                self.spider.logger.info(f"Total flagged fields: {num_flagged_items}")
-
-            if self.logging_rules.get("TOTAL_INVALID", {}).get("log", False) and exceeds_failure_threshold:
-                self.spider.logger.info(f"Total invalid fields: {num_invalid_items}")
-
-            if self.logging_rules.get("TOTAL_FLAGGED", {}).get("store", False):
-                self.increment_stat(StatEnum.TOTAL_FLAGGED.value, num_flagged_items)
-
-            if self.logging_rules.get("TOTAL_INVALID", {}).get("store", False) and exceeds_failure_threshold:
-                self.increment_stat(StatEnum.TOTAL_INVALID.value, num_invalid_items)
-
-        return drop
-
 
     def validate_item(self, item: dict, rules: dict[str, callable], use_universal_default_rules=True) -> dict:
         """
@@ -223,6 +169,70 @@ class ValidationLogger:
                 invalid_values[key] = value  # Treat validation failure as failed if exception occurs
 
         return {"flagged": flagged_values, "invalid": invalid_values}
+
+    def should_drop_item(self, validation_results: dict) -> bool:
+        """
+        Determines if an item should be dropped based on threshold rules.
+        Logs flagged/invalid counts and drops the item if thresholds are exceeded.
+        Additionally, this method handles the bulk of the logging
+        """
+        drop = False
+
+        flagged_values = validation_results.get("flagged", {})
+        invalid_values = validation_results.get("invalid", {})
+
+        num_flagged_items = len(flagged_values)
+        num_invalid_items = len(invalid_values)
+
+        # Check if thresholds for dropping are exceeded
+        exceeds_flag_threshold = (0 < self.threshold_rules["FLAG_THRESHOLD"] < num_flagged_items)
+        exceeds_failure_threshold = (0 < self.threshold_rules["FAILURE_THRESHOLD"] < num_invalid_items)
+
+        if exceeds_flag_threshold or exceeds_failure_threshold:
+            drop = True
+
+            if self.enable_logging and self.logging_rules.get("ITEM_DROPPED", {}).get("log", False):
+                self.log_event(
+                    "ITEM_DROPPED",
+                    "Item dropped due to exceeding thresholds - Flagged: {flagged}/{flagged_threshold}, "
+                    "Invalid: {invalid}/{invalid_threshold}.",
+                    flagged=num_flagged_items, flagged_threshold=self.threshold_rules["FLAG_THRESHOLD"],
+                    invalid=num_invalid_items, invalid_threshold=self.threshold_rules["FAILURE_THRESHOLD"]
+                )
+
+        return drop
+
+    def log_validation_results(self, validation_results: dict) -> None:
+
+        if not self.enable_logging:
+            return
+
+        flagged_values = validation_results.get("flagged", {})
+        invalid_values = validation_results.get("invalid", {})
+
+        num_flagged_items = len(flagged_values)
+        num_invalid_items = len(invalid_values)
+
+        # Log general validation failure
+        if self.logging_rules.get("ITEM_FAILURE", {}).get("log", False):
+            if num_flagged_items > 0 or num_invalid_items > 0:
+                self.log_event(
+                    "ITEM_FAILURE",
+                    "Item failed validation with {} flagged fields and {} invalid fields.",
+                    num_flagged_items, num_invalid_items
+                )
+
+        if self.logging_rules.get("TOTAL_FLAGGED", {}).get("log", False):
+            self.log_event("TOTAL_FLAGGED", "Total flagged fields: {}", num_flagged_items)
+
+        if self.logging_rules.get("TOTAL_INVALID", {}).get("log", False):
+            self.log_event("TOTAL_INVALID", "Total invalid fields: {}", num_invalid_items)
+
+        if self.logging_rules.get("TOTAL_FLAGGED", {}).get("store", False):
+            self.increment_stat(StatEnum.TOTAL_FLAGGED.value, num_flagged_items)
+
+        if self.logging_rules.get("TOTAL_INVALID", {}).get("store", False):
+            self.increment_stat(StatEnum.TOTAL_INVALID.value, num_invalid_items)
 
     def log_event(self, event_name: str, message_template: str, *args, **kwargs):
         """
