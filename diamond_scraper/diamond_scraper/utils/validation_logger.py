@@ -13,17 +13,14 @@ class ValidationLogger:
         self.pipline_name = pipline_name
 
         # Default rules are expected to be defined by the user in dict[str, callable] format
-        if not default_rules:
-            self.default_rules = {}
-        else:
-            self.default_rules = default_rules
+        self.default_rules = default_rules if default_rules is not None else {}
 
         # Default rules for logging behavior (log level and storage settings)
         DEFAULT_LOGGING_RULES = {
             # Validation Events
-            "FIELD_FAILURE": {"log": False, "level": "warning"},  # A field fails validation # TODO
+            "FIELD_FAILURE": {"log": False, "level": "warning"},  # A field fails validation
             "ITEM_FAILURE": {"log": True, "level": "error"},  # An item fails validation
-            "FIELD_FLAGGED": {"log": True, "level": "warning"},  # A field is flagged # TODO
+            "FIELD_FLAGGED": {"log": True, "level": "warning"},  # A field is flagged
             "ITEM_DROPPED": {"log": True, "level": "error"},  # The item is dropped
 
             # Statistics Events
@@ -31,10 +28,10 @@ class ValidationLogger:
             "TOTAL_INVALID": {"log": True, "level": "info", "store": True},  # Tracks total invalid items
 
             # Data Debugging Events
-            "ITEM_INPUT": {"log": True, "level": "debug", "store": False},  # Raw item before processing # TODO
-            "ITEM_OUTPUT": {"log": True, "level": "debug", "store": False},  # Processed item after validation # TODO
-            "FLAGGED_ITEMS": {"log": True, "level": "debug", "store": True},  # Stores flagged items # TODO
-            "DROPPED_ITEMS": {"log": True, "level": "debug", "store": True},  # Stores dropped items # TODO
+            "ITEM_INPUT": {"log": True, "level": "debug", "store": False},  # Raw item before processing
+            "ITEM_OUTPUT": {"log": True, "level": "debug", "store": False},  # Processed item after validation
+            "FLAGGED_ITEMS": {"log": True, "level": "debug", "store": True},  # Stores flagged items
+            "DROPPED_ITEMS": {"log": True, "level": "debug", "store": True},  # Stores dropped items
         }
 
         # Defines thresholds for validation failures before item is dropped, set value to None to never drop items
@@ -43,30 +40,23 @@ class ValidationLogger:
             "FLAG_THRESHOLD": 3,  # Minimum number of flagged fields before dropping item
         }
 
-        if self.enable_logging:
-            if logging_rules:
-                # Validate custom rules to ensure only allowed keys are overridden
-                for key in logging_rules:
-                    if key not in DEFAULT_LOGGING_RULES:
-                        raise KeyError(f"Invalid logging rule: {key}")
+        # Merge logging rules with user-defined rules (if enabled)
+        self.logging_rules = {} if not enable_logging else {**DEFAULT_LOGGING_RULES, **(logging_rules or {})}
 
-                # Merge default logging rules with user-defined rules
-                self.logging_rules = {**DEFAULT_LOGGING_RULES, **logging_rules}
-            else:
-                self.logging_rules = DEFAULT_LOGGING_RULES
-        else:
-            self.logging_rules = None
+        # Merge threshold rules with user-defined rules
+        self.threshold_rules = {**THRESHOLD_RULES, **(threshold_rules or {})}
 
+        # Validate user-defined logging rules
+        if logging_rules:
+            for key in logging_rules:
+                if key not in DEFAULT_LOGGING_RULES:
+                    raise KeyError(f"Invalid logging rule: {key}")
+
+        # Validate user-defined threshold rules
         if threshold_rules:
-            # Validate custom rules to ensure only allowed keys are overridden
             for key in threshold_rules:
                 if key not in THRESHOLD_RULES:
                     raise KeyError(f"Invalid threshold rule: {key}")
-
-                # Merge default threshold rules with user-defined rules
-                self.threshold_rules = {**THRESHOLD_RULES, **threshold_rules}
-        else:
-            self.threshold_rules = THRESHOLD_RULES
 
     def process_item(self, item: dict, rules: dict[str, callable]) -> dict:
         """
@@ -80,21 +70,21 @@ class ValidationLogger:
         :param rules: Validation rules to apply
         :return: Cleaned item if valid, raises DropItem if not
         """
-        validation_results = self.validate_item(item, rules)
+        item, validation_results = self.validate_item(item, rules)
 
         self.log_validation_results(validation_results)
 
-        if self.should_drop_item(validation_results["invalid"]):
-            raise DropItem(f"Dropping item due to invalid values: {validation_results['invalid']}")
+        if self.should_drop_item(validation_results):
+            raise DropItem(f"Dropping item due to invalid values: {validation_results}")
 
         return item
 
-    def get_stat(self, stat_name: str):
+    def get_stat(self, stat_name: str, default=None):
         """
         Fetches the current value of a tracked statistic.
         Used to retrieve statistics stored across different pipelines.
         """
-        return self.spider.crawler.stats.get_value(stat_name)
+        return self.spider.crawler.stats.get_value(stat_name, default)
 
     def increment_stat(self, stat_name: str, value: int = 1):
         self.spider.crawler.stats.inc_value(stat_name, count=value)
@@ -105,14 +95,15 @@ class ValidationLogger:
         Ensures previous values are retained instead of overwritten.
         Formatted as a list of dictionaries.
         """
-        existing_stat = self.get_stat(stat_name)
-        if existing_stat:
-            existing_stat.append(data)
-            self.spider.crawler.stats.set_value(stat_name, existing_stat)
-        else:
-            self.spider.crawler.stats.set_value(stat_name, [data])
+        existing_stat = self.get_stat(stat_name, default=[])
+        if not isinstance(existing_stat, list):
+            existing_stat = [existing_stat]
 
-    def validate_item(self, item: dict, rules: dict[str, callable], use_universal_default_rules=True) -> dict:
+        existing_stat.append(data)
+        self.spider.crawler.stats.set_value(stat_name, existing_stat)
+
+    def validate_item(self, item: dict, rules: dict[str, callable], use_universal_default_rules=True) \
+            -> (dict, dict[str, dict]):
         """
         Applies field validation rules dynamically and returns a dictionary
         containing fields that failed validation.
@@ -124,6 +115,11 @@ class ValidationLogger:
                 If False, applies to fields not in `rules`
         :return: Dict containing failed validations and modified values (if applicable)
         """
+
+        self.log_event("ITEM_INPUT", "Item input before validation: {}", item)
+
+        if self.logging_rules.get("ITEM_INPUT", {}).get("store", False):
+            self.append_to_stat("ITEM_INPUT", item)
 
         adapter = ItemAdapter(item)
         flagged_values = {}
@@ -139,13 +135,19 @@ class ValidationLogger:
                 is_valid, new_value = result
                 if is_valid is None:
                     flagged_values[field] = adapter[field]  # Suspicious but not invalid
+                    self.log_event("FIELD_FLAGGED", "Field {} has been flagged as suspicious", field)
                 elif not is_valid:
                     invalid_values[field] = adapter[field]  # Invalid and should be dropped
+                    self.log_event("FIELD_FAILURE", "Field {} has failed validation", field)
                 else:
                     adapter[field] = new_value  # Valid and can be cleaned
             elif isinstance(result, bool):
                 if not result:
                     invalid_values[field] = adapter[field]  # Invalid field
+                    self.log_event("FIELD_FAILURE", "Field {} has failed validation", field)
+            elif result is None:
+                flagged_values[field] = adapter[field]  # Suspicious but not invalid
+                self.log_event("FIELD_FLAGGED", "Field {} has been flagged as suspicious", field)
             else:
                 raise ValueError(f"Invalid return type from validation rule for {field}")
 
@@ -169,7 +171,14 @@ class ValidationLogger:
                 self.spider.logger.error(f"Error validating item {key}: {value}, Exception: {e}")
                 invalid_values[key] = value  # Treat validation failure as failed if exception occurs
 
-        return {"flagged": flagged_values, "invalid": invalid_values}
+        # Un-adapt the item
+        item = dict(adapter)
+        self.log_event("ITEM_OUTPUT", "Item output after validation: {}", item)
+
+        if self.logging_rules.get("ITEM_OUTPUT", {}).get("store", False):
+            self.append_to_stat("ITEM_OUTPUT", item)
+
+        return item, {"flagged": flagged_values, "invalid": invalid_values}
 
     def should_drop_item(self, validation_results: dict) -> bool:
         """
@@ -197,7 +206,7 @@ class ValidationLogger:
                 "Item dropped due to exceeding thresholds - Flagged: {flagged}/{flagged_threshold}, "
                 "Invalid: {invalid}/{invalid_threshold}.",
                 flagged=num_flagged_items, flagged_threshold=self.threshold_rules["FLAG_THRESHOLD"],
-                invalid=num_invalid_items, invalid_threshold=self.threshold_rules["FAILURE_THRESHOLD"]
+                invalid=num_invalid_items,  invalid_threshold=self.threshold_rules["FAILURE_THRESHOLD"]
             )
 
         return drop
@@ -214,23 +223,32 @@ class ValidationLogger:
         num_invalid_items = len(invalid_values)
 
         # Log general validation failure
-        if self.logging_rules.get("ITEM_FAILURE", {}).get("log", False):
-            if num_flagged_items > 0 or num_invalid_items > 0:
-                self.log_event(
-                    "ITEM_FAILURE",
-                    "Item failed validation with {} flagged fields and {} invalid fields.",
-                    num_flagged_items, num_invalid_items
-                )
+        if num_flagged_items > 0 or num_invalid_items > 0:
+            self.log_event(
+                "ITEM_FAILURE",
+                "Item failed validation with {} flagged fields and {} invalid fields.",
+                num_flagged_items, num_invalid_items
+            )
 
         self.log_event("TOTAL_FLAGGED", "Total flagged fields: {}", num_flagged_items)
 
         self.log_event("TOTAL_INVALID", "Total invalid fields: {}", num_invalid_items)
+
+        self.log_event("FLAGGED_ITEMS", "Flagged values: {}", flagged_values)
+
+        self.log_event("INVALID_ITEMS", "Invalid values: {}", invalid_values)
 
         if self.logging_rules.get("TOTAL_FLAGGED", {}).get("store", False):
             self.increment_stat(StatEnum.TOTAL_FLAGGED.value, num_flagged_items)
 
         if self.logging_rules.get("TOTAL_INVALID", {}).get("store", False):
             self.increment_stat(StatEnum.TOTAL_INVALID.value, num_invalid_items)
+
+        if self.logging_rules.get("FLAGGED_ITEMS", {}).get("store", False):
+            self.append_to_stat(StatEnum.FLAGGED_ITEMS.value, flagged_values)
+
+        if self.logging_rules.get("INVALID_ITEMS", {}).get("store", False):
+            self.append_to_stat(StatEnum.INVALID_ITEMS.value, invalid_values)
 
     def log_event(self, event_name: str, message_template: str, *args, **kwargs):
         """
@@ -257,15 +275,20 @@ class ValidationLogger:
 
 
 class StatEnum(Enum):
-    """Enum for standardized Scrapy stats tracking."""
-
-    # General item processing stats
     ITEMS_PROCESSED = "custom/items_processed"
     ITEMS_DROPPED = "custom/items_dropped"
-    ITEMS_FLAGGED = "custom/items_flagged"
 
     # Validation stats
-    FLAGGED_FIELDS = "custom/flagged_fields"
-    DROPPED_FIELDS = "custom/dropped_fields"
     TOTAL_FLAGGED = "custom/total_flagged"
     TOTAL_INVALID = "custom/total_invalid"
+
+    # Field-level tracking
+    FLAGGED_FIELDS = "custom/flagged_fields"
+    INVALID_FIELDS = "custom/invalid_fields"
+
+    # Debugging and Item Flow Tracking
+    ITEM_INPUT = "custom/item_input"
+    ITEM_OUTPUT = "custom/item_output"
+    FLAGGED_ITEMS = "custom/flagged_items"
+    INVALID_ITEMS = "custom/invalid_items"
+    DROPPED_ITEMS = "custom/dropped_items"
