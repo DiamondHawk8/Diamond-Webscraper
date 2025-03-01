@@ -98,14 +98,14 @@ class ValidationLogger:
         """
         Stores non-integer statistics such as flagged/dropped items.
         Ensures previous values are retained instead of overwritten.
+        Formatted as a list of dictionaries.
         """
         existing_stat = self.get_stat(stat_name)
         if existing_stat:
             existing_stat.append(data)
             self.spider.crawler.stats.set_value(stat_name, existing_stat)
         else:
-            value = [data]
-            self.spider.crawler.stats.set_value(stat_name, data)
+            self.spider.crawler.stats.set_value(stat_name, [data])
 
     def get_stat(self, stat_name: str):
         """
@@ -114,8 +114,6 @@ class ValidationLogger:
         """
         return self.spider.crawler.stats.get_value(stat_name)
 
-
-    # Determines whether an item should be dropped based on failed rules and will log or store accordingly
     def should_drop_item(self, failed_validations: dict) -> bool:
         """
         Determines if an item should be dropped based on threshold rules.
@@ -157,7 +155,7 @@ class ValidationLogger:
                 self.spider.logger.info(f"Total flagged fields: {num_flagged_items}")
 
             if self.logging_rules.get("TOTAL_INVALID", {}).get("log", False) and exceeds_failure_threshold:
-                self.spider.logger.info(f"Total dropped items: {num_invalid_items}")
+                self.spider.logger.info(f"Total invalid fields: {num_invalid_items}")
 
             if self.logging_rules.get("TOTAL_FLAGGED", {}).get("store", False):
                 self.increment_stat(StatEnum.TOTAL_FLAGGED.value, num_flagged_items)
@@ -167,12 +165,6 @@ class ValidationLogger:
 
         return drop
 
-    def log_validation_results(self, failed_validations: dict, logging_rules=None):
-        """
-        Logs failed validations according to predefined logging behavior.
-        Updates spider statistics according to predefined store behavior.
-        """
-        pass  # TODO: Iterate through failed fields, determine log levels, log appropriately
 
     def validate_item(self, item: dict, rules: dict[str, callable], use_universal_default_rules=True) -> dict:
         """
@@ -189,8 +181,6 @@ class ValidationLogger:
         adapter = ItemAdapter(item)
         flagged_values = {}
         invalid_values = {}
-
-
 
         # Helper function to process validation results
         def _process_validation_result(field, result):
@@ -234,9 +224,24 @@ class ValidationLogger:
 
         return {"flagged": flagged_values, "invalid": invalid_values}
 
-# log_event method removed due to lack of flexibility
-    def log_event(self):
-        pass
+    def log_event(self, event_name: str, message_template: str, *args, **kwargs):
+        """
+        General logging method with support for formatted messages.
+        :param event_name: The logging rule key.
+        :param message_template: A template string for logging.
+        :param args: Positional arguments for formatting.
+        :param kwargs: Keyword arguments for formatting.
+        """
+        log_config = self.logging_rules.get(event_name, {"log": False, "level": "info", "store": False})
+
+        if log_config.get("log", False):
+            log_level = log_config.get("level", "info")
+
+            # Dynamically format message with provided arguments
+            formatted_message = message_template.format(*args, **kwargs)
+
+            # Log according to provided specifications
+            getattr(self.spider.logger, log_level, self.spider.logger.info)(formatted_message)
 
 
 class StatEnum(Enum):
@@ -252,6 +257,3 @@ class StatEnum(Enum):
     DROPPED_FIELDS = "custom/dropped_fields"
     TOTAL_FLAGGED = "custom/total_flagged"
     TOTAL_INVALID = "custom/total_invalid"
-
-    # Placeholder for custom user-defined stats
-    CUSTOM = "custom/user_defined"
