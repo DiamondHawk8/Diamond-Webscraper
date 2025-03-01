@@ -53,11 +53,12 @@ DEFAULT_REQUEST_HEADERS = {
     "Accept-Language": "en",
 }
 
-# Enable or disable spider middlewares
-# See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
-#SPIDER_MIDDLEWARES = {
-#    "diamond_scraper.middlewares.DiamondScraperSpiderMiddleware": 543,
-#}
+
+SPIDER_MIDDLEWARES = {
+    # Session stats only executes on close, so order doesn't affect it much
+    "diamond_scraper.middlewares.SessionStatsLoggerMiddleware": 100,
+    "diamond_scraper.middlewares.DiamondScraperSpiderMiddleware": 543,
+}
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html

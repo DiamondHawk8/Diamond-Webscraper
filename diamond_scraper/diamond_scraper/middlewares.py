@@ -105,3 +105,22 @@ class DiamondScraperDownloaderMiddleware:
 
     def spider_opened(self, spider):
         spider.logger.info("Spider opened: %s" % spider.name)
+
+
+class SessionStatsLoggerMiddleware:
+    @classmethod
+    def from_crawler(cls, crawler):
+        middleware = cls()
+        crawler.signals.connect(middleware.spider_closed, signal=signals.spider_closed)
+        return middleware
+
+    def spider_closed(self, spider):
+        """
+        Logs final Scrapy session stats at the end of the crawl.
+        """
+        session_stats = spider.crawler.stats.get_stats()
+
+        spider.logger.info("==== Scrapy Session Stats ====")
+        for key, value in session_stats.items():
+            spider.logger.info(f"{key}: {value}")
+        spider.logger.info("==== End of Scrapy Session ====")
