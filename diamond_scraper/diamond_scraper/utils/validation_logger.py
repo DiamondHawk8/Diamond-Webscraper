@@ -124,6 +124,7 @@ class ValidationLogger:
                 If False, applies to fields not in `rules`
         :return: Dict containing failed validations and modified values (if applicable)
         """
+
         adapter = ItemAdapter(item)
         flagged_values = {}
         invalid_values = {}
@@ -191,14 +192,13 @@ class ValidationLogger:
         if exceeds_flag_threshold or exceeds_failure_threshold:
             drop = True
 
-            if self.enable_logging and self.logging_rules.get("ITEM_DROPPED", {}).get("log", False):
-                self.log_event(
-                    "ITEM_DROPPED",
-                    "Item dropped due to exceeding thresholds - Flagged: {flagged}/{flagged_threshold}, "
-                    "Invalid: {invalid}/{invalid_threshold}.",
-                    flagged=num_flagged_items, flagged_threshold=self.threshold_rules["FLAG_THRESHOLD"],
-                    invalid=num_invalid_items, invalid_threshold=self.threshold_rules["FAILURE_THRESHOLD"]
-                )
+            self.log_event(
+                "ITEM_DROPPED",
+                "Item dropped due to exceeding thresholds - Flagged: {flagged}/{flagged_threshold}, "
+                "Invalid: {invalid}/{invalid_threshold}.",
+                flagged=num_flagged_items, flagged_threshold=self.threshold_rules["FLAG_THRESHOLD"],
+                invalid=num_invalid_items, invalid_threshold=self.threshold_rules["FAILURE_THRESHOLD"]
+            )
 
         return drop
 
@@ -222,11 +222,9 @@ class ValidationLogger:
                     num_flagged_items, num_invalid_items
                 )
 
-        if self.logging_rules.get("TOTAL_FLAGGED", {}).get("log", False):
-            self.log_event("TOTAL_FLAGGED", "Total flagged fields: {}", num_flagged_items)
+        self.log_event("TOTAL_FLAGGED", "Total flagged fields: {}", num_flagged_items)
 
-        if self.logging_rules.get("TOTAL_INVALID", {}).get("log", False):
-            self.log_event("TOTAL_INVALID", "Total invalid fields: {}", num_invalid_items)
+        self.log_event("TOTAL_INVALID", "Total invalid fields: {}", num_invalid_items)
 
         if self.logging_rules.get("TOTAL_FLAGGED", {}).get("store", False):
             self.increment_stat(StatEnum.TOTAL_FLAGGED.value, num_flagged_items)
@@ -242,7 +240,11 @@ class ValidationLogger:
         :param args: Positional arguments for formatting.
         :param kwargs: Keyword arguments for formatting.
         """
-        log_config = self.logging_rules.get(event_name, {"log": False, "level": "info", "store": False})
+
+        if not self.enable_logging:
+            return
+
+        log_config = self.logging_rules.get(event_name, {"log": False, "level": "info"})
 
         if log_config.get("log", False):
             log_level = log_config.get("level", "info")
