@@ -1,8 +1,7 @@
 # useful for handling different item types with a single interface
 from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
-import re
-import logging
+from .utils import validation_logger
 
 
 class DiamondScraperPipeline:
@@ -82,73 +81,69 @@ class DuplicatesPipeline:
 
 class InvalidDataPipeline:
     def __init__(self):
-        self.items_processed = 0
-        self.items_dropped = 0
-        self.items_flagged = 0
-
-        # Variables to hold any flagged or dropped item
-
-        # TODO, code must be refactored to track all invalid items that would trigger a drop
-        self.dropped_items = {}
-        self.flagged_items = {}
-
-    # TODO, allow for dynamic rules
-    VALIDATION_RULES = {
-        'tickerSymbol': lambda x: 0 < len(x) <= 5,
-        'currency': lambda x: len(x) == 1,
-        'price': lambda x: x >= 0,
-        'volume': lambda x: x >= 0,
-        'peRatio': lambda x: x > 0,
-        'eps': lambda x: x >= 0,
-    }
-
-    def process_item(self, item, spider):
-        adapter = ItemAdapter(item)
-
-        # Logged after adapter transformation to ensure proper formatting
-        spider.logger.debug(f"Raw item before {self.__class__.__name__} processing: {dict(adapter)}")
-
-        for key, value in adapter.items():
-            # Remove any None or empty values
-            if value is None or value == "":
-                raise DropItem(f"Invalid item {key}: {value}")
-
-            if key in self.VALIDATION_RULES:
-                # Numerically convert any
-                if key in ['price', 'volume', 'peRatio', 'eps']:
-                    try:
-                        value = float(value)
-                        adapter[key] = value
-                    except ValueError:
-                        spider.logger.error(f"Dropping item - {key}: {value}")
-                        self.items_dropped += 1
-                        raise DropItem(f"Invalid numeric value for {key}: {value}")
-                if not self.VALIDATION_RULES[key](value):
-                    spider.logger.warning(f"Suspicious value for {key}: {value}")
-                    self.items_flagged += 1
-        self.items_processed += 1
-        return dict(adapter)
+        self.validation_logger = None  # Must be initialized after pipeline init, as spider does not exist yet
+        self.validation_rules = {
+            "tickerSymbol": lambda x: (0 < len(x) <= 5, x),
+            "currency": lambda x: (len(x) == 1, x),
+            "price": lambda x: (float(x) >= 0, x),
+            "volume": lambda x: (float(x) >= 0, x),
+            "peRatio": lambda x: (float(x) > 0, x),
+            "eps": lambda x: (float(x) >= 0, x),
+        }
 
     def open_spider(self, spider):
+        self.validation_logger = validation_logger.ValidationLogger(spider, enable_logging=True)
         spider.logger.info(f"Starting {self.__class__.__name__} validation")
+
+    def process_item(self, item, spider):
+        try:
+            return self.validation_logger.process_item(item, self.validation_rules)
+        except DropItem as e:
+            spider.logger.warning(str(e))
+            raise
 
     def close_spider(self, spider):
         spider.logger.info(f"Finished {self.__class__.__name__} validation")
-        spider.logger.info(f"Items processed: {self.items_processed}")
-        spider.logger.info(f"Items dropped: {self.items_dropped}")
-        spider.logger.info(f"Suspicious items: {self.items_flagged}")
 
-        # Track spider wide statistics
-        spider.crawler.stats.inc_value("custom/items_processed", count=self.items_processed)
-        spider.crawler.stats.inc_value("custom/items_dropped", count=self.items_dropped)
-        spider.crawler.stats.inc_value("custom/items_flagged", count=self.items_flagged)
+class TestPipeline:
+    def __init__(self):
+        self.validation_logger = None
 
-        dropped = spider.crawler.stats.get_value("custom/flagged_fields", default=[])
-        for key, value in self.dropped_items.items():
-            dropped.append(value)
-        spider.crawler.stats.set_value("custom/dropped_fields", dropped)
+    def open_spider(self, spider):
+        self.validation_logger = validation_logger.ValidationLogger(spider, enable_logging=True, logging_rules={
+            "ITEM_INPUT": {"log": True, "level": "info"},
+            "ITEM_OUTPUT": {"log": True, "level": "info"},
+            "FIELD_FAILURE": {"log": True, "level": "warning"},
+            "FIELD_FLAGGED": {"log": True, "level": "warning"},
+            "ITEM_FAILURE": {"log": True, "level": "error"},
+            "ITEM_DROPPED": {"log": True, "level": "error"},
+        })
+        spider.logger.info(f"Starting {self.__class__.__name__} validation")
 
-        flagged = spider.crawler.stats.get_value("custom/flagged_fields", default=[])
-        for key, value in self.flagged_items.items():
-            flagged.append({key: value})
-        spider.crawler.stats.set_value("custom/flagged_fields", flagged)
+    def process_item(self, item, spider):
+        test_item = {
+            "tickerSymbol": " tesla ",  # Should be cleaned (uppercase, stripped spaces)
+            "currency": "USD",  # Valid
+            "price": -5,  # Invalid (negative price)
+            "volume": "N/A",  # Invalid (non-numeric)
+            "peRatio": 15.3,  # Valid
+            "eps": 0.02,  # Suspicious (below 0.05 threshold)
+        }
+
+        test_rules = {
+            "tickerSymbol": lambda x: (True, x.upper().strip()),  # Convert to uppercase, strip spaces
+            "currency": lambda x: (len(x) == 3, x),  # Ensure it's a 3-letter currency code
+            "price": lambda x: (x >= 0, x),  # Fail if price is negative
+            "volume": lambda x: (x.isdigit(), int(x) if x.isdigit() else x),  # Fail if non-numeric
+            "peRatio": lambda x: (x > 0, x),  # Must be positive
+            "eps": lambda x: (None if x < 0.05 else True, x),  # Flag as suspicious if below 0.05
+        }
+
+        try:
+            return self.validation_logger.process_item(test_item, test_rules)
+        except DropItem as e:
+            spider.logger.warning(str(e))
+            raise
+
+    def close_spider(self, spider):
+        spider.logger.info(f"Finished {self.__class__.__name__} validation")

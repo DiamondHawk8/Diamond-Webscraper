@@ -1,7 +1,9 @@
 # Validation and Logging Utility for Scrapy Pipelines
 
 ## Overview
+
 This utility class is designed to assist with:
+
 - **Data Cleaning** (optional, can be done in rules)
   - Cleaning can be done inside validation rules using `(True, new_value)`.
 - **Validation & Flagging** of item fields
@@ -10,11 +12,16 @@ This utility class is designed to assist with:
 ## Usage
 
 ### 1. Instantiate the Utility Class
+
 In a Scrapy pipeline, create an instance of the class:
 
 ```python
 tracker = ValidationLogger(spider)
 ```
+
+### 2. Define Validation Rules
+
+Validation rules can:
 
 ### 2. Define Validation Rules
 Validation rules can:
@@ -26,6 +33,7 @@ Validation rules can:
 - **Return `(None, new_value)`** → The value is suspicious, replaced, and logged but kept.
 
 #### Example Rule Set:
+
 ```python
 rules = {
     "tickerSymbol": lambda x: (True, x.upper().replace(" ", "")),  # Cleaning rule
@@ -35,17 +43,19 @@ rules = {
 ```
 
 ### 3. Validate an Item
+
 Pass an **item dictionary** and the **rules** into `validate_item()`:
 
 ```python
 item = {"tickerSymbol": " msft ", "price": 0.5, "volume": -100}
 
-validation_results = tracker.validate_item(item, rules)
+item, validation_results = tracker.validate_item(item, rules)
 
 print(validation_results)
 ```
 
 #### Example Output:
+
 ```python
 {
     "flagged": {"price": 0.5},  # Suspicious value but still valid
@@ -54,20 +64,32 @@ print(validation_results)
 ```
 
 ### 4. Log Validation Results
-```python
-if validation_results["flagged"]:
-    tracker.log_event("FIELD_FLAGGED", f"Suspicious values: {validation_results['flagged']}")
 
-if validation_results["invalid"]:
-    tracker.log_event("ITEM_FAILURE", f"Invalid fields: {validation_results['invalid']}")
+```python
+tracker.log_validation_results(validation_results)
 ```
 
 ### 5. Decide Whether to Drop the Item
+
 ```python
-should_drop = tracker.should_drop_item(validation_results["invalid"])
+should_drop = tracker.should_drop_item(validation_results)
 
 if should_drop:
     raise DropItem(f"Dropping item due to invalid values: {validation_results['invalid']}")
 ```
 
+### 6. Process an Item in One Step
+
+If you want to **run validation, logging, and dropping in a single step**, use `process_item()`:
+
+```python
+cleaned_item = tracker.process_item(item, rules)
+```
+
+This method:
+
+1. Validates the item.
+2. Logs flagged/invalid values.
+3. Drops the item if necessary.
+4. Returns the cleaned item if valid.
 
