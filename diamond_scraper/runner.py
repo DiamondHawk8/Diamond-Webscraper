@@ -4,6 +4,7 @@ import argparse
 import datetime
 from pathlib import Path
 
+
 def parse_arguments():
     """
     Parse command-line arguments to determine which spider(s) to run and how to configure the Scrapy runtime.
@@ -29,17 +30,19 @@ def parse_arguments():
     parser.add_argument('-lf', '--log-file', type=str, help='Custom log file name')
     parser.add_argument('-l', '--log-level', type=str, default='INFO',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                        help='Specify the logging level')
+                        help='Specify the logging level, overwrites any LOG_LEVEL provided in --settings')
 
     # Output config
     parser.add_argument('-o', '--output', type=str, help='Output file')
+    parser.add_argument('-O', '--overwrite-output', action='store_true', help='Overwrite output file')
     parser.add_argument('-f', '--output-format', type=str,
                         choices=['json', 'jsonlines', 'csv', 'xml'],
                         help='Output format (requires --output)')
 
     # Behavior modifiers
     parser.add_argument('-n', '--no-cache', action='store_true', help='Disable caching')
-    parser.add_argument('-j', '--job-dir', type=str, help='Persistent job dir for pausing/resuming')
+    parser.add_argument('-j', '--job-dir', type=str, help='Persistent job dir for pausing/resuming, '
+                                                          'overwrites --settings')
     parser.add_argument('-t', '--tags', nargs='+', help='Optional tags for labeling the run')
     parser.add_argument('-d', '--dry-run', action='store_true', help='Print command but do not execute it')
 
@@ -75,20 +78,68 @@ def setup_environment(args):
     return env_settings
 
 
-def run_spider(spider_name: str, args, env_settings):
-
-    #
+def run_spider(spider_name: str, args, env_settings: dict):
     """
-    Execute the given spider using Scrapy’s command-line interface from within Python.
+    Assemble and execute the Scrapy command for a given spider.
 
-    Arguments:
-    - spider_name: str – name of the spider to run (must match Scrapy's spider name)
-    - extra_args: list – optional additional arguments (maybe log level, output file, more?)
+    Responsibilities:
+    1. Build the base Scrapy CLI command.
+    2. Add output destination and format.
+    3. Inject Scrapy settings from both CLI and setup_environment().
+    4. Respect CLI flags like --job-dir, --no-cache, and --dry-run.
+    5. Execute or print the command based on --dry-run.
 
-    Potential Uses:
-    - scrapy.cmdline.execute([...])
+    Parameters:
+    - spider_name: str — The name of the spider to run
+    - args: argparse.Namespace — Parsed CLI arguments from user input
+    - env_settings: dict — Derived environment settings (e.g., LOG_FILE) from setup_environment()
     """
-    pass
+
+    command = ['scrapy', 'crawl', spider_name]
+
+    #  Output file logic 
+    if args.output:
+        if args.overwrite_output:
+            command.extend(['-O', args.output])
+        else:
+            command.extend(['-o', args.output])
+
+    if args.output_format:
+        command.extend(['-t', args.output_format])
+
+    #  Inject jobdir (if not overridden by --settings) 
+    if args.job_dir is not None:
+        command.extend(['-s', f'JOBDIR={args.job_dir}'])
+
+    # Inject environment-derived settings (e.g., log path, tags)
+    for key, value in env_settings.items():
+        command.extend(['-s', f'{key}={value}'])
+
+    #  Inject settings from --settings unless overridden
+    for setting in (args.settings or []):
+        # Respect CLI overrides for JOBDIR and LOG_LEVEL
+        if setting.upper().startswith('JOBDIR=') and args.job_dir is not None:
+            continue
+        if setting.upper().startswith('LOG_LEVEL=') and args.log_level is not None:
+            continue
+        command.extend(['-s', setting])
+
+    #  Inject log level if not already overridden 
+    if not any(s.upper().startswith('LOG_LEVEL=') for s in (args.settings or [])):
+        command.extend(['-s', f'LOG_LEVEL={args.log_level}'])
+
+    #  Disable caching if requested 
+    if args.no_cache:
+        command.extend(['-s', 'HTTPCACHE_ENABLED=False'])
+
+    #  Dry-run mode: print command and skip execution 
+    if args.dry_run:
+        print("Dry run command:", " ".join(command))
+        return
+
+    #  Execute the final command 
+    from scrapy.cmdline import execute
+    execute(command)
 
 
 def main():
