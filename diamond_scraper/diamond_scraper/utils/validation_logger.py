@@ -105,13 +105,12 @@ class ValidationLogger:
     def validate_item(self, item: dict, rules: dict[str, callable], use_universal_default_rules=True) \
             -> (dict, dict[str, dict]):
         """
-        Applies field validation rules dynamically and returns a dictionary
-        containing fields that failed validation.
+        Applies field validation rules dynamically and returns a dictionary containing fields that failed validation.
 
         :param item: dict of items scraped
-        :param rules: dict where keys are field names and values are validation callables
+        :param rules: dict where keys are field names and values are validation callable.
                 Callables must return either bool or (bool, new_value)
-        :param use_universal_default_rules: If True, applies default rules to all fields
+        :param use_universal_default_rules: If True, applies default rules to all fields.
                 If False, applies to fields not in `rules`
         :return: Dict containing failed validations and modified values (if applicable)
         """
@@ -184,7 +183,6 @@ class ValidationLogger:
         """
         Determines if an item should be dropped based on threshold rules.
         Logs flagged/invalid counts and drops the item if thresholds are exceeded.
-        Additionally, this method handles the bulk of the logging
         """
         drop = False
 
@@ -212,7 +210,9 @@ class ValidationLogger:
         return drop
 
     def log_validation_results(self, validation_results: dict) -> None:
-
+        """
+        Handles logging of the validation results.
+        """
         if not self.enable_logging:
             return
 
