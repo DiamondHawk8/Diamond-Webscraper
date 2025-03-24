@@ -1,10 +1,8 @@
 import os
 import sys
 import argparse
-
-# Ensure path is added to module search path at runtime
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+import datetime
+from pathlib import Path
 
 def parse_arguments():
     """
@@ -28,10 +26,10 @@ def parse_arguments():
     parser.add_argument('-s', '--settings', nargs='+', help='Override Scrapy settings (e.g. -s LOG_LEVEL=DEBUG)')
 
     # Logging control
+    parser.add_argument('-lf', '--log-file', type=str, help='Custom log file name')
     parser.add_argument('-l', '--log-level', type=str, default='INFO',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         help='Specify the logging level')
-    parser.add_argument('-lf', '--log-file', type=str, help='Custom log file name')
 
     # Output config
     parser.add_argument('-o', '--output', type=str, help='Output file')
@@ -48,18 +46,38 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def setup_environment():
+def setup_environment(args):
     """
     Optionally configure environment variables, logging paths, or settings overrides here.
-    TODO:
-    - Dynamically set LOG_FILE path using today's date
-    - Add project directory to sys.path
-    - Export Scrapy environment settings if needed
     """
-    pass
+
+    env_settings = {}
+
+    # Ensure path is added to module search path at runtime
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    if abs_path not in sys.path:
+        sys.path.append(abs_path)
+
+    # If user provides --log-file, use it.
+    # Otherwise, construct a default one using datetime format (e.g. logs/scraper_YYYYMMDD_HHMMSS.log)
+    if args.log_file is not None:
+        Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)
+        env_settings['LOG_FILE'] = args.log_file
+    else:
+        time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        Path(f"logs/scraper_{time}").parent.mkdir(parents=True, exist_ok=True)
+        env_settings['LOG_FILE'] = f"logs/scraper_{time}.log"
+
+    # Update the log file path
+    if args.tags is not None:
+        env_settings['TAGS'] = args.tags
+
+    return env_settings
 
 
-def run_spider(spider_name: str, args):
+def run_spider(spider_name: str, args, env_settings):
+
+    #
     """
     Execute the given spider using Scrapy’s command-line interface from within Python.
 
@@ -80,7 +98,7 @@ def main():
     3. Call run_spider() with the appropriate name and options
     """
     parsed_args = parse_arguments()
-    setup_environment()
+    setup_environment(parsed_args)
 
     for spider_name in parsed_args.spiders:
         run_spider(spider_name, parsed_args)
