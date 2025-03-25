@@ -1,4 +1,5 @@
 import scrapy
+from diamond_scraper.items import StockItem
 
 class BaseSpider(scrapy.Spider):
     name = 'base'
@@ -43,23 +44,25 @@ class BaseSpider(scrapy.Spider):
         eps = table_items[9]
 
         self.logger.info("Fields scraped, yielding")
-        yield {
-            "tickerSymbol": tickerSymbol,
-            "name": name,
-            "currency": currency,
-            "timestamp": timestamp,
-            "timezone": timezone,
-            "price": price,
-            "priceChange": priceChange,
-            "percentChange": percentChange,
-            "open": open,
-            "dayLow": dayLow,
-            "dayHigh": dayHigh,
-            "volume": volume,
-            "avgVolume": avgVolume,
-            "marketCap": marketCap,
-            "peRatio": peRatio,
-            "eps": eps,
-        }
+        item = StockItem(
+            tickerSymbol=tickerSymbol,
+            name=name,
+            currency=currency,
+            timestamp=timestamp,
+            timezone=timezone,
+            price=price,
+            priceChange=priceChange,
+            percentChange=percentChange,
+            open=open,
+            dayLow=dayLow,
+            dayHigh=dayHigh,
+            volume=volume,
+            avgVolume=avgVolume,
+            marketCap=marketCap,
+            peRatio=peRatio,
+            eps=eps,
+        )
+
+        yield item
 
 
