@@ -1,13 +1,4 @@
-# Scrapy settings for diamond_scraper project
-#
-# For simplicity, this file contains only settings considered important or
-# commonly used. You can find more settings consulting the documentation:
-#
-#     https://docs.scrapy.org/en/latest/topics/settings.html
-#     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-#     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
-
-# TODO, configure more advanced default settings
+import os
 
 BOT_NAME = "diamond_scraper"
 
@@ -111,6 +102,8 @@ HTTPCACHE_IGNORE_HTTP_CODES = []
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
 
-LOG_FILE = "scraper.log"
+LOG_DIR = os.path.join(os.getcwd(), 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, 'scrapy_output.log')
 LOG_LEVEL = "INFO"
 

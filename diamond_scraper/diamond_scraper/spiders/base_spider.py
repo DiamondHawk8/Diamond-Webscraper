@@ -1,14 +1,8 @@
 import scrapy
-import logging
-
 
 class BaseSpider(scrapy.Spider):
     name = 'base'
     urls = ["https://www.marketwatch.com/investing/stock/tsla"]
-    custom_settings = {
-        "FEED_FORMAT": "json",
-        "FEED_URI": "output.json",
-    }
     # var to track total price of books
     total_price = 0
     books_scraped = 0
