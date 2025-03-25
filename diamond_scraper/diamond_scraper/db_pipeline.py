@@ -1,63 +1,42 @@
 import sqlite3
 from itemadapter import ItemAdapter
-from scrapy.exceptions import DropItem
+from diamond_scraper.utils import db_utils
 
 class DatabasePipeline:
     """
-    Generic database pipeline for writing validated items to a persistent store.
-    Currently uses SQLite, planned to support postgreSQL later
+    Pipeline to store items into a database.
+    Uses SQLite by default. PostgreSQL support planned.
     """
 
     def __init__(self):
         self.connection = None
         self.cursor = None
+        self.auto_create = True  # TODO Can be toggled in settings.py
 
     def open_spider(self, spider):
         """
-        Initialize database connection and tables when spider opens.
-        Read config from settings or environment variables.
+        Establish database connection.
+        - Load DB path from Scrapy settings or use default
+        - Create a cursor for executing SQL
         """
-        # TODO: Read database path or URI from settings
-        # TODO: Connect to SQLite using sqlite3.connect(...)
-        # TODO: Create tables for StockItem and IntoliItem if they don't exist
         pass
 
     def close_spider(self, spider):
         """
-        Commit transactions and close the database connection.
+        Commit any changes and close the database connection.
         """
-        # TODO: self.connection.commit() and self.connection.close()
         pass
 
     def process_item(self, item, spider):
         """
-        Route item to appropriate insert logic based on type.
+        For each item:
+        - Ensure table exists (if auto_create is enabled)
+        - Insert the item into the appropriate table
         """
-        adapter = ItemAdapter(item)
-
-        # TODO: Identify item type and call self.insert_item_...()
-        # TODO: replace with more robust functionality
-
-        return item
-
-    def insert_item_stock(self, adapter, spider):
-        """
-        Insert a StockItem into the database.
-        """
-        # TODO: Define and execute INSERT INTO query for stock table
         pass
 
-    def insert_item_intoli(self, adapter, spider):
+    def insert_item_into(self, adapter, spider, table_name, auto_create=False):
         """
-        Insert an IntoliItem into the database.
+        Utility method for manually inserting an item into a specific table.
         """
-        # TODO: Define and execute INSERT INTO query for intoli table
         pass
-
-    def insert_item_into(self, adapter, spider, database, auto_create=False):
-        """
-        Insert an Item into a specified database
-        Additionally allows for attempting automatic database creation
-        """
-        # TODO: Create a utils class to handle more advanced operations
-

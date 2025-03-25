@@ -1,43 +1,70 @@
-def generate_create_table(item, table_name=None):
+from itemadapter import ItemAdapter
+
+
+def generate_create_table(item, table_name=None, override_types=None):
     """
-    Accepts an item or item adapter, and a name
-    returns a CREATE TABLE IF NOT EXISTS
-    checks the item name instance if a name is not provided
+    Accepts a Scrapy item or adapter and returns a SQL statement string:
+    CREATE TABLE IF NOT EXISTS ...
+
+    - Detects data types for fields if possible
+    - Uses item class name as table name if none provided
+    - Infers field type from instance, can be overridden if needed
     """
     pass
+
 
 def generate_insert_sql(item, table_name):
     """
-    Returns INSERT INTO ... (columns) VALUES (?, ?, ...) and a tuple of values
+    Returns a tuple: (INSERT INTO ... SQL string, values tuple)
+
+    - Uses parameterized placeholders (e.g., ?, %s)
+    - Extracts field names and values from the item
     """
     pass
 
-def initialize_table(cursor, item, table_name):
+
+def initialize_table(cursor, item, table_name, override_types=None):
     """
-    execution wrapper that:
-    Checks if a table needs to be created
-    Generates the SQL using generate_create_table_sql()
-    Executes it using the provided cursor
+    Execution wrapper that:
+    - Calls generate_create_table() to build table SQL
+    - Executes the SQL using the provided DB cursor
     """
     pass
 
-def insert_item(cursor, item, table_name):
+
+def insert_item(cursor, item, table_name, spider=None):
     """
-    execution wrapper that:
-    Call generate_insert_sql( to build SQL and value tuple
-    Execute the insert with the given DB cursor
+    Execution wrapper that:
+    - Calls generate_insert_sql() to build insert SQL + values
+    - Executes insert using cursor
+    - Optionally logs the result via log_db_action()
     """
     pass
 
 
 def log_db_action(spider, action, table, item=None):
     """
-    Logs actions like table creation, inserts, errors, etc.
+    Logs a structured DB event for debugging/monitoring.
+
+    Parameters:
+    - action: INSERT, INSERT_FAILED, CREATE_TABLE etc
+    - table: the target table name
+    - item: optional Scrapy item (for type or summary)
     """
     pass
 
+
 def clear_table(cursor, table_name):
+    """
+    Clears all contents from a table.
+
+    TESTING ONLY, NO SAFETY CHECKS ENABLED
+    """
     pass
 
+
 def get_existing_tables(cursor):
+    """
+    Returns a list of existing table names from the connected databas
+    """
     pass
