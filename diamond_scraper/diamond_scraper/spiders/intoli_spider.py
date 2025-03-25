@@ -1,6 +1,7 @@
 import scrapy
 
 from diamond_scraper.items import IntoliItem
+import re
 
 
 class IntoliSpider(scrapy.Spider):
@@ -15,58 +16,88 @@ class IntoliSpider(scrapy.Spider):
     def parse(self, response):
         """
         TODO FIELDS TO SCRAPE:
-            ------------------------------------------General Tests
-            userAgentTest = scrapy.Field()
-            webDriverTest = scrapy.Field()
-            webDriverAdvancedTest = scrapy.Field()
-            chromeTest = scrapy.Field()
-            permissionsTest = scrapy.Field()
-            pluginsLengthTest = scrapy.Field()
-            pluginTypeTest = scrapy.Field()
-            languageTest = scrapy.Field()
-            webGLVendorTest = scrapy.Field()
-            webGlRendererTest = scrapy.Field()
-            brokenImageDimensionsTest = scrapy.Field()
             ------------------------------------------PhantomJS Detection
-            phantom_UATest = scrapy.Field()
-            phantom_PROPERTIES = scrapy.Field()
-            phantom_ETSL = scrapy.Field()
-            phantom_LANGUAGE = scrapy.Field()
-            phantom_WEBSOCKET = scrapy.Field()
-            phantom_OVERFLOW = scrapy.Field()
-            phantom_WINDOW_HEIGHT = scrapy.Field()
+            phantomUaTest = scrapy.Field()
+            phantomPropertiesTest = scrapy.Field()
+            phantomEtslTest = scrapy.Field()
+            phantomLanguageTest = scrapy.Field()
+            phantomWebsocketTest = scrapy.Field()
+            phantomOverflowTest = scrapy.Field()
+            phantomWindowHeightTest = scrapy.Field()
             ------------------------------------------Headless Chrome Detection
-            headchr_UA = scrapy.Field()
-            headchr_CHROME_OBJ = scrapy.Field()
-            headchr_PERMISSIONS = scrapy.Field()
-            headchr_PLUGINS = scrapy.Field()
-            headchr_IFRAME = scrapy.Field()
+            headchrUaTest = scrapy.Field()
+            headchrChromeObjTest = scrapy.Field()
+            headchrPermissionsTest = scrapy.Field()
+            headchrPluginsTest = scrapy.Field()
+            headchrIframeTest = scrapy.Field()
             ------------------------------------------Debugging & Tool Detection
-            chr_DEBUG_TOOLS = scrapy.Field()
-            selenium_DRIVER = scrapy.Field()
-            sequentum = scrapy.Field()
+            chromeDebugToolsTest = scrapy.Field()
+            seleniumDriverTest = scrapy.Field()
+            sequentumTest = scrapy.Field()
             ------------------------------------------Environment Data
-            navigator = scrapy.Field()
-            screen = scrapy.Field()
-            battery = scrapy.Field()
-            memory = scrapy.Field()
+            navigatorTest = scrapy.Field()
+            screenTest = scrapy.Field()
+            batteryTest = scrapy.Field()
+            memoryTest = scrapy.Field()
             ------------------------------------------Canvas Fingerprints
-            canvas1 = scrapy.Field()
-            canvas2 = scrapy.Field()
-            canvas3 = scrapy.Field()
-            canvas4 = scrapy.Field()
-            canvas5 = scrapy.Field()
+            canvas1Test = scrapy.Field()
+            canvas2Test = scrapy.Field()
+            canvas3Test = scrapy.Field()
+            canvas4Test = scrapy.Field()
+            canvas5Test = scrapy.Field()
             ------------------------------------------Codec Support
-            videoCodecs = scrapy.Field()
-            audioCodecs = scrapy.Field()
+            videoCodecsTest = scrapy.Field()
+            audioCodecsTest = scrapy.Field()
             ------------------------------------------Fp-collect raw dump
-            fp_collect = scrapy.Field()
-
+            fpCollectDump = scrapy.Field()
         """
 
-        webAgentTest = response.css()
+        def extract_table_elements(snippet, default=None):
+            """
+            Extracts test status and value from a <tr> snippet.
+            Returns a dict with 'status' and 'value' keys.
+            """
+            result_cell = snippet.css('td:nth-child(2)')
+            status_class = result_cell.attrib.get('class', '').strip()
+
+            value = result_cell.css('::text').get()
+            return {
+                "status": status_class if status_class else default,
+                "value": value.strip() if value else default
+            }
+
+        generalTests = response.css('table tr')
+        try:
+            userAgentTest = extract_table_elements(generalTests[1])
+            webDriverTest = extract_table_elements(generalTests[2])
+            webDriverAdvancedTest = extract_table_elements(generalTests[3])
+            chromeTest = extract_table_elements(generalTests[4])
+            permissionsTest = extract_table_elements(generalTests[5])
+            pluginsLengthTest = extract_table_elements(generalTests[6])
+            pluginsTypeTest = extract_table_elements(generalTests[7])
+            languageTest = extract_table_elements(generalTests[8])
+            webGLVendorTest = extract_table_elements(generalTests[9])
+            webGLRendererTest = extract_table_elements(generalTests[10])
+            brokenImageDimensionsTest = extract_table_elements(generalTests[11])
+        except Exception as e:
+            self.logger.warning(f"Failed to extract general tests: {e}")
+            return
+
+        # TODO implement Playwright so that fingerprint scanner tests can be scraped
+        fingerprintTests = response.css('[id=fp2] tr')
 
         item = IntoliItem(
-            webAgentTest=webAgentTest,
+            userAgentTest=userAgentTest,
+            webDriverTest=webDriverTest,
+            webDriverAdvancedTest=webDriverAdvancedTest,
+            chromeTest=chromeTest,
+            permissionsTest=permissionsTest,
+            pluginsLengthTest=pluginsLengthTest,
+            pluginsTypeTest=pluginsTypeTest,
+            languageTest=languageTest,
+            webGLVendorTest=webGLVendorTest,
+            webGLRendererTest=webGLRendererTest,
+            brokenImageDimensionsTest=brokenImageDimensionsTest,
         )
+        print(dict(item))
         yield item
