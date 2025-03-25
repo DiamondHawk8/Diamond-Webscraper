@@ -3,6 +3,7 @@ import sys
 import argparse
 import datetime
 from pathlib import Path
+from scrapy.cmdline import execute
 
 
 def parse_arguments():
@@ -99,10 +100,10 @@ def run_spider(spider_name: str, args, env_settings: dict):
 
     #  Output file logic 
     if args.output:
-        if args.overwrite_output:
-            command.extend(['-O', args.output])
-        else:
-            command.extend(['-o', args.output])
+        command.extend(['-o', args.output])
+
+    if args.overwrite_output:
+        command.extend(['-O'])
 
     if args.output_format:
         command.extend(['-t', args.output_format])
@@ -137,8 +138,6 @@ def run_spider(spider_name: str, args, env_settings: dict):
         print("Dry run command:", " ".join(command))
         return
 
-    #  Execute the final command 
-    from scrapy.cmdline import execute
     execute(command)
 
 
@@ -148,12 +147,11 @@ def main():
     2. Set up the runtime environment
     3. Call run_spider() with the appropriate name and options
     """
-    parsed_args = parse_arguments()
-    setup_environment(parsed_args)
+    args = parse_arguments()
+    env_settings = setup_environment(args)
 
-    for spider_name in parsed_args.spiders:
-        run_spider(spider_name, parsed_args)
-    pass
+    for spider_name in args.spiders:
+        run_spider(spider_name, args, env_settings)
 
 
 if __name__ == "__main__":
