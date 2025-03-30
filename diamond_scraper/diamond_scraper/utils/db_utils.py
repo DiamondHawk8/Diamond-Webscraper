@@ -2,7 +2,7 @@ import traceback
 
 from itemadapter import ItemAdapter
 import sqlite3
-
+import json
 
 def generate_create_table(item, table_name=None, override_types=None):
     """
@@ -54,19 +54,27 @@ def generate_insert_sql(item, table_name=None):
         str: "INSERT INTO table_name (field1, field2, ...) VALUES (?, ?, ...)"
         tuple: (val1, val2, ...) extracted from item in the same order as columns.
     """
-    adapter = ItemAdapter(item)
-
     if not table_name:
         table_name = item.__class__.__name__.lower()
 
-    fields = list(adapter.keys())
-    placeholders = ", ".join(["?"] * len(fields))  # "?, ?, ?"
-    columns_str = ", ".join(fields)
+    adapter = ItemAdapter(item)
 
-    sql = f"INSERT INTO {table_name} ({columns_str}) VALUES ({placeholders})"
-    values = tuple(adapter[field] for field in fields)
+    field_names = []
+    values = []
 
-    return sql, values
+    for field_name, value in adapter.items():
+        field_names.append(field_name)
+        # Handle dicts/lists by JSON-encoding them
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value)
+        values.append(value)
+
+    columns = ", ".join(field_names)
+    placeholders = ", ".join(["?"] * len(values))
+    command = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders});"
+
+    return command, tuple(values)
+
 
 
 def initialize_table(cursor, item, table_name=None, override_types=None, spider=None):
