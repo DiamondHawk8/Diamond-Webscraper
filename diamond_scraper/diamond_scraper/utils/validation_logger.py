@@ -274,6 +274,39 @@ class ValidationLogger:
             getattr(self.spider.logger, log_level, self.spider.logger.info)(formatted_message)
 
 
+def track_db_event(self, event: Enum, message: str = None, level: str = "info"):
+    """
+    Increments the specified DB event stat and optionally logs a message.
+
+    :param event: logging rule key
+    :param message: message to be logged
+    :param level: logging level of the event
+    :return: None
+    """
+    self.increment_stat(event.value, 1)
+
+    if message and self.enable_logging:
+        # Use self.spider.logger if available
+        if hasattr(self.spider, 'logger'):
+            getattr(self.spider.logger, level.lower())(f"[DB_EVENT] {message}")
+        else:
+            print(f"[DB_EVENT] {message}")
+
+
+def log_general_message(self, message: str, level: str = "info"):
+    """
+    Logs a custom message at the given level.
+    This is outside the normal validation flow, for custom usage.
+    """
+    if not self.enable_logging:
+        return
+
+    if hasattr(self.spider, 'logger'):
+        getattr(self.spider.logger, level.lower())(f"[GENERAL] {message}")
+    else:
+        print(f"[GENERAL] {message}")
+
+
 class StatEnum(Enum):
     ITEMS_PROCESSED = "custom/items_processed"
     ITEMS_DROPPED = "custom/items_dropped"
@@ -292,3 +325,9 @@ class StatEnum(Enum):
     FLAGGED_ITEMS = "custom/flagged_items"
     INVALID_ITEMS = "custom/invalid_items"
     DROPPED_ITEMS = "custom/dropped_items"
+
+    # Database tracking
+    DB_TABLE_CREATED = "custom/db_table_created"
+    DB_TABLE_CREATE_FAILED = "custom/db_table_create_failed"
+    DB_INSERT_SUCCESS = "custom/db_insert_success"
+    DB_INSERT_FAILED = "custom/db_insert_failed"
