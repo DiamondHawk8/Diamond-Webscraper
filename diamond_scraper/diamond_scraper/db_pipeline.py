@@ -19,13 +19,17 @@ class DatabasePipeline:
         - Load DB path from Scrapy settings or use default
         - Create a cursor for executing SQL
         """
-        pass
+        db_path = spider.settings.get('DB_PATH', "DWS_scraper.db")
+        self.connection = sqlite3.connect(db_path)
+        self.cursor = self.connection.cursor()
 
     def close_spider(self, spider):
         """
         Commit any changes and close the database connection.
         """
-        pass
+        self.connection.commit()
+        self.connection.close()
+        spider.logger.info('Database connection closed.')
 
     def process_item(self, item, spider):
         """
@@ -33,10 +37,22 @@ class DatabasePipeline:
         - Ensure table exists (if auto_create is enabled)
         - Insert the item into the appropriate table
         """
-        pass
+        table_name = item.__class__.__name__.lower()
 
-    def insert_item_into(self, adapter, spider, table_name, auto_create=False):
+        if self.auto_create:
+            db_utils.initialize_table(self.cursor, item, table_name)
+
+        db_utils.insert_item(self.cursor, item, table_name, spider=spider)
+        return item
+    def insert_item_into(self, item, spider, table_name):
         """
         Utility method for manually inserting an item into a specific table.
         """
+        db_utils.insert_item(self.cursor, item, table_name)
         pass
+
+    def create_table(self, item, table_name=None):
+        """
+        Utility method for manually creating a table from an item.
+        """
+        db_utils.initialize_table(self.cursor, item, table_name)

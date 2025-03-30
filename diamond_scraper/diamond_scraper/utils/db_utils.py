@@ -73,7 +73,7 @@ def generate_insert_sql(item, table_name=None):
     return command, tuple(values)
 
 
-def initialize_table(cursor, item, table_name, override_types=None, spider=None):
+def initialize_table(cursor, item, table_name=None, override_types=None, spider=None):
     """
     Ensures the table exists for this item by:
     1. Building the CREATE TABLE IF NOT EXISTS statement via generate_create_table()
