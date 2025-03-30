@@ -95,7 +95,6 @@ def initialize_table(cursor, item, table_name=None, override_types=None, spider=
         log_db_action(spider, "CREATE_TABLE", table_name, item=item)
     except Exception as e:
         log_db_action(spider, "CREATE_TABLE_FAILED", table_name, item=item, error=e)
-        raise
 
 
 def insert_item(cursor, item, table_name, spider=None, log=True):
@@ -113,7 +112,6 @@ def insert_item(cursor, item, table_name, spider=None, log=True):
     except Exception as e:
         if log:
             log_db_action(spider, "INSERT_FAILED", table_name, item=item, error=e)
-        raise
 
 
 def log_db_action(spider, action, table, item=None, error=None):
@@ -147,7 +145,8 @@ def clear_table(cursor, table_name, spider=None):
     TESTING ONLY, NO SAFETY CHECKS ENABLED
     """
     cursor.execute(f"DELETE FROM {table_name}")
-    spider.logger.info(f"Clearing table {table_name}")
+    if spider:
+        spider.logger.info(f"Clearing table {table_name}")
     pass
 
 def drop_table(cursor, table_name, spider=None):
@@ -157,7 +156,8 @@ def drop_table(cursor, table_name, spider=None):
     TESTING ONLY, NO SAFETY CHECKS ENABLED
     """
     cursor.execute(f"DROP TABLE {table_name}")
-    spider.logger.info(f"Dropped table {table_name}")
+    if spider:
+        spider.logger.info(f"Dropped table {table_name}")
 
 def get_existing_tables(cursor):
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
