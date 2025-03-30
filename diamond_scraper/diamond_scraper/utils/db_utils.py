@@ -54,23 +54,19 @@ def generate_insert_sql(item, table_name=None):
         str: "INSERT INTO table_name (field1, field2, ...) VALUES (?, ?, ...)"
         tuple: (val1, val2, ...) extracted from item in the same order as columns.
     """
+    adapter = ItemAdapter(item)
+
     if not table_name:
         table_name = item.__class__.__name__.lower()
 
-    adapter = ItemAdapter(item)
+    fields = list(adapter.keys())
+    placeholders = ", ".join(["?"] * len(fields))  # "?, ?, ?"
+    columns_str = ", ".join(fields)
 
-    field_names = []
-    values = []
-    for field_name, value in adapter.items():
-        field_names.append(field_name)
-        values.append(value)
+    sql = f"INSERT INTO {table_name} ({columns_str}) VALUES ({placeholders})"
+    values = tuple(adapter[field] for field in fields)
 
-    columns = ", ".join(field_names)
-    data = ", ".join(values)
-
-    command = f"INSERT INTO {table_name} ({columns}) VALUES ({data});"
-
-    return command, tuple(values)
+    return sql, values
 
 
 def initialize_table(cursor, item, table_name=None, override_types=None, spider=None):
@@ -103,7 +99,7 @@ def insert_item(cursor, item, table_name, spider=None, log=True):
     """
     sql, vals = generate_insert_sql(item, table_name)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, vals)
         if log:
             log_db_action(spider, "INSERT_ITEM", table_name, item=item)
     except Exception as e:
