@@ -1,3 +1,5 @@
+import traceback
+
 from itemadapter import ItemAdapter
 import sqlite3
 
@@ -71,26 +73,46 @@ def generate_insert_sql(item, table_name=None):
     return command, tuple(values)
 
 
-def initialize_table(cursor, item, table_name, override_types=None):
+def initialize_table(cursor, item, table_name, override_types=None, spider=None):
     """
-    Execution wrapper that:
-    - Calls generate_create_table() to build table SQL
-    - Executes the SQL using the provided DB cursor
+    Ensures the table exists for this item by:
+    1. Building the CREATE TABLE IF NOT EXISTS statement via generate_create_table()
+    2. Executing it with 'cursor.execute(...)'
+
+    Args:
+        cursor: The sqlite3 (or Postgres) cursor object with .execute() method.
+        item: The item or adapter representing the schema.
+        table_name: The SQL table name to create if missing.
+        override_types: Dict for manually overriding certain field types
     """
-    pass
+    command = generate_create_table(item, table_name, override_types)
+    try:
+        cursor.execute(command)
+        log_db_action(spider, "CREATE_TABLE", table_name, item=item)
+    except Exception as e:
+        log_db_action(spider, "CREATE_TABLE_FAILED", table_name, item=item, error=e)
+        raise
 
 
-def insert_item(cursor, item, table_name, spider=None):
+def insert_item(cursor, item, table_name, spider=None, log=True):
     """
     Execution wrapper that:
     - Calls generate_insert_sql() to build insert SQL + values
     - Executes insert using cursor
     - Optionally logs the result via log_db_action()
     """
-    pass
+    sql, vals = generate_insert_sql(item, table_name)
+    try:
+        cursor.execute(sql)
+        if log:
+            log_db_action(spider, "INSERT_ITEM", table_name, item=item)
+    except Exception as e:
+        if log:
+            log_db_action(spider, "INSERT_FAILED", table_name, item=item, error=e)
+        raise
 
 
-def log_db_action(spider, action, table, item=None):
+def log_db_action(spider, action, table, item=None, error=None):
     """
     Logs a structured DB event for debugging/monitoring.
 
@@ -99,10 +121,22 @@ def log_db_action(spider, action, table, item=None):
     - table: the target table name
     - item: optional Scrapy item (for type or summary)
     """
-    pass
+    msg = f"[DB:{action}] table={table}"
+    if item:
+        msg += f" item={item.__class__.__name__}"
+    if spider and hasattr(spider, 'logger'):
+        if not error:
+            spider.logger.info(msg)
+        else:
+            spider.logger.error(f"{msg}\nException: {error})")
+    else:
+        if not error:
+            print(msg)
+        else:
+            print(f"{msg}\nException: {error}")
 
 
-def clear_table(cursor, table_name):
+def clear_table(cursor, table_name, spider=None):
     """
     Clears all contents from a table.
 
@@ -113,6 +147,6 @@ def clear_table(cursor, table_name):
 
 def get_existing_tables(cursor):
     """
-    Returns a list of existing table names from the connected databas
+    Returns a list of existing table names from the connected database
     """
     pass
