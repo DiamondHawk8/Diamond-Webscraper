@@ -1,4 +1,5 @@
 from itemadapter import ItemAdapter
+import sqlite3
 
 
 def generate_create_table(item, table_name=None, override_types=None):
@@ -10,17 +11,64 @@ def generate_create_table(item, table_name=None, override_types=None):
     - Uses item class name as table name if none provided
     - Infers field type from instance, can be overridden if needed
     """
+
+    adapter = ItemAdapter(item)
+
+    if not table_name:
+        table_name = item.__class__.__name__.lower()
+    if not override_types:
+        override_types = {}
+
+    # Start Command structure
+    command = f"CREATE TABLE IF NOT EXISTS {table_name}("
+
+    for field_name, value in adapter.items():
+        # Attempt type inference
+        sql_type = "TEXT"
+        if isinstance(value, bool):
+            sql_type = "BOOLEAN"
+        elif isinstance(value, int):
+            sql_type = "INTEGER"
+        elif isinstance(value, float):
+            sql_type = "REAL"
+
+        if field_name in override_types:
+            sql_type = override_types[field_name]
+
+        command += f"{field_name} {sql_type},"
+
+    # Remove trailing comma and close command
+    command = command[:-1] + ");"
+    return command
+
     pass
 
 
-def generate_insert_sql(item, table_name):
+def generate_insert_sql(item, table_name=None):
     """
-    Returns a tuple: (INSERT INTO ... SQL string, values tuple)
+    Returns (sql_string, values_tuple) for inserting the item into the specified table.
 
-    - Uses parameterized placeholders (e.g., ?, %s)
-    - Extracts field names and values from the item
+    (str, tuple):
+        str: "INSERT INTO table_name (field1, field2, ...) VALUES (?, ?, ...)"
+        tuple: (val1, val2, ...) extracted from item in the same order as columns.
     """
-    pass
+    if not table_name:
+        table_name = item.__class__.__name__.lower()
+
+    adapter = ItemAdapter(item)
+
+    field_names = []
+    values = []
+    for field_name, value in adapter.items():
+        field_names.append(field_name)
+        values.append(value)
+
+    columns = ", ".join(field_names)
+    data = ", ".join(values)
+
+    command = f"INSERT INTO {table_name} ({columns}) VALUES ({data});"
+
+    return command, tuple(values)
 
 
 def initialize_table(cursor, item, table_name, override_types=None):
