@@ -18,6 +18,17 @@ In a Scrapy pipeline, create an instance of the class:
 ```python
 tracker = ValidationLogger(spider)
 ```
+### Logging General Messages
+
+Use `log_general_message()` for debug or status logs unrelated to validation or DB:
+
+```python
+tracker.log_general_message("This is a custom log message", level="warning")
+```
+
+- Logs with level and prefix: `[GENERAL] This is a custom log message`
+
+---
 
 ### 2. Define Validation Rules
 
@@ -92,4 +103,50 @@ This method:
 2. Logs flagged/invalid values.
 3. Drops the item if necessary.
 4. Returns the cleaned item if valid.
+
+
+## Database / External Event Logging
+
+Beyond validation, you can track database-related events and custom logs using:
+
+### 1. Enums in `StatEnum`
+
+```python
+    DB_TABLE_CREATED = "custom/db_table_created"
+    DB_TABLE_CREATE_FAILED = "custom/db_table_create_failed"
+    DB_INSERT_SUCCESS = "custom/db_insert_success"
+    DB_INSERT_FAILED = "custom/db_insert_failed"
+```
+
+---
+
+### 2. Tracking Database Events
+
+Use `track_db_event()` to log and increment stats during database operations:
+
+```python
+tracker.track_db_event(
+    event=StatEnum.DB_TABLE_CREATED,
+    message="Created table stockitem successfully",
+    level="info"
+)
+```
+
+- Increments the stat `custom/db_table_created`
+- Logs: `[DB_EVENT] Created table stockitem successfully`
+
+---
+
+
+### Example Integration in a Utility
+
+Inside `db_utils`:
+
+```python
+try:
+    cursor.execute(sql)
+    tracker.track_db_event(StatEnum.DB_INSERT_SUCCESS, f"Inserted item into {table_name}")
+except Exception as e:
+    tracker.track_db_event(StatEnum.DB_INSERT_FAILED, str(e), level="error")
+```
 
