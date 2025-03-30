@@ -142,11 +142,19 @@ def clear_table(cursor, table_name, spider=None):
 
     TESTING ONLY, NO SAFETY CHECKS ENABLED
     """
+    cursor.execute(f"DELETE FROM {table_name}")
+    spider.logger.info(f"Clearing table {table_name}")
     pass
 
+def drop_table(cursor, table_name, spider=None):
+    """
+    Drops specified table
+
+    TESTING ONLY, NO SAFETY CHECKS ENABLED
+    """
+    cursor.execute(f"DROP TABLE {table_name}")
+    spider.logger.info(f"Dropped table {table_name}")
 
 def get_existing_tables(cursor):
-    """
-    Returns a list of existing table names from the connected database
-    """
-    pass
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    return [row[0] for row in cursor.fetchall()]
