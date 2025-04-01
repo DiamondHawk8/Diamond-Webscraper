@@ -51,11 +51,11 @@ SPIDER_MIDDLEWARES = {
     "diamond_scraper.middlewares.DiamondScraperSpiderMiddleware": 543,
 }
 
-# Enable or disable downloader middlewares
-# See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    "diamond_scraper.middlewares.DiamondScraperDownloaderMiddleware": 543,
-#}
+
+DOWNLOADER_MIDDLEWARES = {
+   # "diamond_scraper.middlewares.DiamondScraperDownloaderMiddleware": 543,
+    "scrapy_playwright.middleware.ScrapyPlaywrightDownloaderMiddleware": 800, # TODO ensure this goes last (or after proxy)
+}
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
@@ -68,7 +68,7 @@ ITEM_PIPELINES = {
     # "diamond_scraper.pipelines.InvalidDataPipeline": 200,
     "diamond_scraper.pipelines.DuplicatesPipeline": 300,
     'diamond_scraper.pipelines.db_pipeline.DatabasePipeline': 998,
-    "diamond_scraper.pipelines.TestPipeline": 999,
+    # "diamond_scraper.pipelines.TestPipeline": 999,
 }
 
 FEEDS = {
@@ -92,12 +92,15 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
 # Enable showing throttling stats for every response received:
 #AUTOTHROTTLE_DEBUG = False
 
+
+
 # TODO turn off after development is done
 HTTPCACHE_ENABLED = True
 HTTPCACHE_EXPIRATION_SECS = 3600
 HTTPCACHE_DIR = "httpcache"
 HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = "scrapy.extensions.httpcache.FilesystemCacheStorage"
+
 
 # Set settings whose default value is deprecated to a future-proof value
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
@@ -108,3 +111,14 @@ os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, 'scrapy_output.log')
 LOG_LEVEL = "INFO"
 
+
+# Enables async Playwright integration for JS-rendering
+PLAYWRIGHT_BROWSER_TYPE = "chromium"  # can also use firefox or webkit
+
+PLAYWRIGHT_LAUNCH_OPTIONS = {
+    "headless": False,         # Set False for debugging
+    "timeout": 30 * 1000,     # 30 seconds
+}
+
+PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 20 * 1000  # 20 seconds
+PLAYWRIGHT_MAX_CONTEXTS = 5  # Max concurrent Playwright session
