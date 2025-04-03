@@ -1,7 +1,7 @@
 import scrapy
-
 from diamond_scraper.items import IntoliItem
-import re
+import diamond_scraper.utils.stealth_utils as stealth
+from scrapy_playwright.page import PageMethod
 
 
 class IntoliSpider(scrapy.Spider):
@@ -11,7 +11,16 @@ class IntoliSpider(scrapy.Spider):
     def start_requests(self):
         for url in self.urls:
             self.logger.info(f"Beginning request for url: {url}")
-            yield scrapy.Request(url=url, callback=self.parse)
+            head = stealth.get_random_user_agent()
+
+            yield scrapy.Request(url=url, callback=self.parse, meta={"playwright": True})
+
+            # POST request for testing
+            yield scrapy.FormRequest(
+                url="https://httpbin.org/post",
+                formdata={"test": "val"},
+                meta={"playwright": True},
+            )
 
     def parse(self, response):
         """
@@ -84,8 +93,9 @@ class IntoliSpider(scrapy.Spider):
             return
 
         # TODO implement Playwright so that fingerprint scanner tests can be scraped
-        fingerprintTests = response.css('[id=fp2] tr')
+        fingerprintTests = response.css('[id=fp2] tr').getall()
 
+        print(fingerprintTests)
         item = IntoliItem(
             userAgentTest=userAgentTest,
             webDriverTest=webDriverTest,

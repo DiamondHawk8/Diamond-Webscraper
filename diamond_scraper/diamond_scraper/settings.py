@@ -113,6 +113,7 @@ LOG_LEVEL = "INFO"
 
 
 # Enables async Playwright integration for JS-rendering
+# TODO, allow for runtime browser switching
 PLAYWRIGHT_BROWSER_TYPE = "chromium"  # can also use firefox or webkit
 
 PLAYWRIGHT_LAUNCH_OPTIONS = {
