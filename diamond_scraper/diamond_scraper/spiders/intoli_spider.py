@@ -1,6 +1,8 @@
+
 import scrapy
 from diamond_scraper.items import IntoliItem
 import diamond_scraper.utils.stealth_utils as stealth
+import random
 from scrapy_playwright.page import PageMethod
 
 
@@ -10,10 +12,18 @@ class IntoliSpider(scrapy.Spider):
 
     def start_requests(self):
         for url in self.urls:
-            self.logger.info(f"Beginning request for url: {url}")
-            head = stealth.get_random_user_agent()
-
-            yield scrapy.Request(url=url, callback=self.parse, meta={"playwright": True})
+            headers = {"User-Agent": stealth.get_random_user_agent()}
+            self.logger.info(f"Beginning request for {url} with UA: {headers['User-Agent']}")
+            yield scrapy.Request(url=url,
+                                 callback=self.parse,
+                                 headers=headers,
+                                 meta={"playwright": True,
+                                       "playwright_page_methods": [
+                                           PageMethod("wait_for_event", "domcontentloaded"),
+                                           PageMethod("wait_for_timeout", random.randint(1500, 3500))
+                                             ]
+                                       }
+                                 )
 
             # POST request for testing
             yield scrapy.FormRequest(
