@@ -2,7 +2,16 @@ import random
 
 
 def get_weighted_choice(population, weights, k=1):
-    return random.choices(population, weights=weights, k=k)
+    """
+    Selects k elements from a weighted population using random.choices
+    Expects population and weights to be equal-length lists
+    Returns a single item if k=1, otherwise a list of items
+    """
+    if not k == 1:
+        return random.choices(population, weights=weights, k=k)
+    else:
+        return random.choices(population, weights=weights, k=k)[0]
+
 
 
 def get_random_user_agent(skew=True) -> str:
@@ -243,9 +252,9 @@ def get_random_headers(replacements=None) -> dict:
         "DNT": get_random_DNT(),
     }
 
-    for key, val in headers:
-        if not val:
-            del headers[key]
+    headers = {
+        k: v for k, v in headers.items() if v is not None
+    }
 
     if replacements:
         headers.update(replacements)
