@@ -6,12 +6,31 @@ def get_weighted_choice(population, weights, k=1):
 
 
 def get_random_user_agent(skew=True) -> str:
-    user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-        "Mozilla/5.0 (X11; Linux x86_64)",
-    ]
-    return random.choice(user_agents)
+    # TODO, customize user agents like accept languages
+    user_agents = {
+        # Windows + Chrome
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36": 10.0,
+
+        # macOS + Safari
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15": 3.5,
+
+        # Linux + Firefox
+        "Mozilla/5.0 (X11; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0": 2.0,
+
+        # Windows + Firefox
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0": 1.5,
+
+        # macOS + Chrome
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_6_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36": 1.0,
+
+        # Linux + Chrome
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36": 0.7
+    }
+
+    if not skew:
+        return random.choice(list(user_agents.keys()))
+
+    return get_weighted_choice(list(user_agents.keys()), list(user_agents.values()), 1)
 
 
 def get_random_accept_language(skew=True, language="en", randomize_primary=False, append_alternates=False,
@@ -152,8 +171,8 @@ def get_random_accept_language(skew=True, language="en", randomize_primary=False
         "ar": ar_suffix
     }
 
-# TODO, more advanced logic for determining the appropriate alternate based off preceding languages, currently is random
-# would involve increasing the likelihood of the same language following itself, especially no preference suffixes
+    # TODO, more advanced logic for determining the appropriate alternate based off preceding languages, currently is random
+    # would involve increasing the likelihood of the same language following itself, especially no preference suffixes
 
     suffix_dict = language_suffixes.get(prefix)
     if not suffix_dict:
@@ -189,7 +208,7 @@ def get_random_accept_language(skew=True, language="en", randomize_primary=False
                 argument += f"{prefix};"
 
             # Append relative priority
-            argument += f"q={0.9-i*0.1}"
+            argument += f"q={0.9 - i * 0.1}"
 
     return argument
 
