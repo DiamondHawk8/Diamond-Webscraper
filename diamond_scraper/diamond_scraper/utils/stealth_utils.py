@@ -250,14 +250,21 @@ def get_random_headers(replacements=None) -> dict:
         "User-Agent": get_random_user_agent(),
         "Accept-Language": get_random_accept_language(),
         "DNT": get_random_DNT(),
-    }
-
-    headers = {
-        k: v for k, v in headers.items() if v is not None
+        "Upgrade-Insecure-Requests": "1",
+        # TODO randomize accept values
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Connection": "keep-alive",
+        # Accept encoding?
     }
 
     if replacements:
         headers.update(replacements)
+
+    # Remove any None headers
+    headers = {
+        k: v for k, v in headers.items() if v is not None
+    }
+
     return headers
 
 
