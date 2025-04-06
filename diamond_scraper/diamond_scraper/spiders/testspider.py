@@ -1,6 +1,6 @@
 import scrapy
 from scrapy_playwright.page import PageMethod
-import time
+import asyncio
 
 class MySpider(scrapy.Spider):
     name = 'test'
@@ -8,15 +8,21 @@ class MySpider(scrapy.Spider):
     def start_requests(self):
         yield scrapy.Request(
             'https://example.com',
-            meta=dict(
-                playwright=True,
-                playwright_include_page=True,
-                playwright_page_methods=[
+            meta={
+                "playwright": True,
+                "playwright_include_page": True,
+                "playwright_context": "new",
+                "playwright_page_methods": [
                     PageMethod('wait_for_selector', 'body'),
-                ]
-            )
+                ],
+            }
         )
 
-    def parse(self, response):
-        time.sleep(2)
-        return {"AAAAA":"WHY ISNT THIS WORKING"}
+    async def parse(self, response):
+        print("arrived")
+        page = response.meta.get("playwright_page")
+        await asyncio.sleep(10)
+        print("done")
+        yield {"AAAAA": "WHY ISNT THIS WORKING"}
+        if page:
+            await page.close()
