@@ -1,7 +1,7 @@
 # useful for handling different item types with a single interface
 from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
-from .utils import validation_logger
+from diamond_scraper.utils import validation_logger
 
 
 class DiamondScraperPipeline:

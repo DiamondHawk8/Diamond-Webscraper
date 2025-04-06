@@ -54,7 +54,7 @@ SPIDER_MIDDLEWARES = {
 
 DOWNLOADER_MIDDLEWARES = {
    # "diamond_scraper.middlewares.DiamondScraperDownloaderMiddleware": 543,
-    "scrapy_playwright.middleware.ScrapyPlaywrightDownloaderMiddleware": 800, # TODO ensure this goes last (or after proxy)
+  # "scrapy_playwright.middleware.ScrapyPlaywrightDownloaderMiddleware": 800, # TODO ensure this goes last (or after proxy)
 }
 
 # Enable or disable extensions
