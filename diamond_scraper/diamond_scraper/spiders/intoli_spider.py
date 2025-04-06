@@ -4,7 +4,7 @@ from diamond_scraper.items import IntoliItem
 import diamond_scraper.utils.stealth_utils as stealth
 import random
 from scrapy_playwright.page import PageMethod
-
+import time
 
 class IntoliSpider(scrapy.Spider):
     name = 'IntoliSpider'
@@ -12,27 +12,39 @@ class IntoliSpider(scrapy.Spider):
 
     def start_requests(self):
         for url in self.urls:
-            headers = {"User-Agent": stealth.get_random_user_agent()}
-            self.logger.info(f"Beginning request for {url} with UA: {headers['User-Agent']}")
+            # headers = {"User-Agent": stealth.get_random_user_agent()}
+            # self.logger.info(f"Beginning request for {url} with UA: {headers['User-Agent']}")
+            self.logger.info(f"Beginning request for {url}")
             yield scrapy.Request(url=url,
                                  callback=self.parse,
-                                 headers=headers,
-                                 meta={"playwright": True,
-                                       "playwright_page_methods": [
-                                           PageMethod("wait_for_event", "domcontentloaded"),
-                                           PageMethod("wait_for_timeout", random.randint(1500, 3500))
-                                             ]
-                                       }
+                                 # headers=headers,
+                                 meta={
+                                     "playwright": True,
+                                     "playwright_page_methods": [
+                                         PageMethod('wait_for_selector', 'body'),
+                                         PageMethod(
+                                             "wait_for_function",
+                                             "document.querySelector('#fp2') && document.querySelector('#fp2').rows.length > 2"
+                                         ),
+                                         PageMethod("wait_for_timeout", 1500)
+                                     ]
+                                 }
                                  )
 
             # POST request for testing
+            """
             yield scrapy.FormRequest(
                 url="https://httpbin.org/post",
                 formdata={"test": "val"},
                 meta={"playwright": True},
             )
+            """
 
     def parse(self, response):
+        print("arrived at parse")
+        time.sleep(10)
+        self.logger.info("[INTOLI] Playwright rendering triggered.")
+        print(f"[DEBUG] Rendered response length: {len(response.text)}")
         """
         TODO FIELDS TO SCRAPE:
             ------------------------------------------PhantomJS Detection
@@ -106,6 +118,14 @@ class IntoliSpider(scrapy.Spider):
         fingerprintTests = response.css('[id=fp2] tr').getall()
 
         print(fingerprintTests)
+
+        fingerprintTests = response.css('[id=fp2] tr').get()
+        print(fingerprintTests)
+
+        # print(response.body)
+
+
+
         item = IntoliItem(
             userAgentTest=userAgentTest,
             webDriverTest=webDriverTest,

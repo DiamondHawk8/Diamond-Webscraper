@@ -54,7 +54,11 @@ SPIDER_MIDDLEWARES = {
 
 DOWNLOADER_MIDDLEWARES = {
    # "diamond_scraper.middlewares.DiamondScraperDownloaderMiddleware": 543,
-  # "scrapy_playwright.middleware.ScrapyPlaywrightDownloaderMiddleware": 800, # TODO ensure this goes last (or after proxy)
+}
+
+DOWNLOAD_HANDLERS = {
+    "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+    "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
 }
 
 # Enable or disable extensions
@@ -64,10 +68,10 @@ DOWNLOADER_MIDDLEWARES = {
 #}
 
 ITEM_PIPELINES = {
-    "diamond_scraper.pipelines.core_pipelines.DiamondScraperPipeline": 100,
+    # "diamond_scraper.pipelines.core_pipelines.DiamondScraperPipeline": 100,
     # "diamond_scraper.pipelines.InvalidDataPipeline": 200,
-    "diamond_scraper.pipelines.core_pipelines.DuplicatesPipeline": 300,
-    'diamond_scraper.pipelines.db_pipeline.DatabasePipeline': 998,
+    #"diamond_scraper.pipelines.core_pipelines.DuplicatesPipeline": 300,
+    # 'diamond_scraper.pipelines.db_pipeline.DatabasePipeline': 998,
     # "diamond_scraper.pipelines.TestPipeline": 999,
 }
 
@@ -111,6 +115,8 @@ os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, 'scrapy_output.log')
 LOG_LEVEL = "INFO"
 
+# TESTING, REMOVE THIS LATER
+LOG_FILE_APPEND = False
 
 # Enables async Playwright integration for JS-rendering
 # TODO, allow for runtime browser switching
@@ -119,6 +125,8 @@ PLAYWRIGHT_BROWSER_TYPE = "chromium"  # can also use firefox or webkit
 PLAYWRIGHT_LAUNCH_OPTIONS = {
     "headless": False,         # Set False for debugging
     "timeout": 30 * 1000,     # 30 seconds
+    "devtools": True,
+    "slow_mo": 500,
 }
 
 PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 20 * 1000  # 20 seconds
