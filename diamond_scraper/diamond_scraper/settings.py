@@ -64,9 +64,9 @@ DOWNLOADER_MIDDLEWARES = {
 #}
 
 ITEM_PIPELINES = {
-    "diamond_scraper.pipelines.DiamondScraperPipeline": 100,
+    "diamond_scraper.pipelines.core_pipelines.DiamondScraperPipeline": 100,
     # "diamond_scraper.pipelines.InvalidDataPipeline": 200,
-    "diamond_scraper.pipelines.DuplicatesPipeline": 300,
+    "diamond_scraper.pipelines.core_pipelines.DuplicatesPipeline": 300,
     'diamond_scraper.pipelines.db_pipeline.DatabasePipeline': 998,
     # "diamond_scraper.pipelines.TestPipeline": 999,
 }
