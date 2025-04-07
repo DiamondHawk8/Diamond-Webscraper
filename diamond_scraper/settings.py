@@ -166,5 +166,12 @@ PROXY_LIST = [
 ]
 """
 # PROXY_LIST = os.getenv("PROXY_LIST", "").split(",")
+
+# Default proxy
 FALLBACK_PROXY = None
+ENABLE_FALLBACK_PROXY = True
+
+# Specifies number of tolerable proxy failures before proxy is considered un-viable
+PROXY_FAILURE_CHECK_ENABLED = True
+FAILURE_THRESHOLD = 3
 
