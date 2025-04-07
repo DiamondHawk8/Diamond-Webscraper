@@ -12,8 +12,9 @@ class IntoliSpider(scrapy.Spider):
 
     def start_requests(self):
         for url in self.urls:
-            headers = {"User-Agent": stealth.get_random_user_agent()}
+            headers = {"User-Agent": stealth.get_random_user_agent(skew=False)}
             self.logger.info(f"Beginning request for {url} with UA: {headers['User-Agent']}")
+            print(f"Beginning request for {url} with UA: {headers['User-Agent']}")
             self.logger.info(f"Beginning request for {url}")
             yield scrapy.Request(url=url,
                                  callback=self.parse,
@@ -34,7 +35,7 @@ class IntoliSpider(scrapy.Spider):
                                              "wait_for_function",
                                              "document.querySelector('#fp2') && document.querySelector('#fp2').rows.length > 2"
                                          ),
-                                         PageMethod("wait_for_timeout", 30000) # Debug, should not be set this high for general purpsoes
+                                         PageMethod("wait_for_timeout", stealth.get_random_wait_time())
                                      ]
                                  }
                                  )
@@ -52,32 +53,13 @@ class IntoliSpider(scrapy.Spider):
         print("arrived at parse")
         self.logger.info("[INTOLI] Playwright rendering triggered.")
         print(f"[DEBUG] Rendered response length: {len(response.text)}")
+        # TODO reorder fields, based on intoli
+        # TODO implement detail scraping once <HIGH> functionality is implemented
         """
         TODO FIELDS TO SCRAPE:
-            ------------------------------------------PhantomJS Detection
-            phantomUaTest = scrapy.Field()
-            phantomPropertiesTest = scrapy.Field()
-            phantomEtslTest = scrapy.Field()
-            phantomLanguageTest = scrapy.Field()
-            phantomWebsocketTest = scrapy.Field()
-            MQ_ScreenTest = scrapy.Field()
-            phantomOverflowTest = scrapy.Field()
-            phantomWindowHeightTest = scrapy.Field()
-            ------------------------------------------Headless Chrome Detection
-            headchrUaTest = scrapy.Field()
-            headchrChromeObjTest = scrapy.Field()
-            headchrPermissionsTest = scrapy.Field()
-            headchrPluginsTest = scrapy.Field()
-            headchrIframeTest = scrapy.Field()
-            ------------------------------------------Debugging & Tool Detection
-            chromeDebugToolsTest = scrapy.Field()
-            seleniumDriverTest = scrapy.Field()
-            sequentumTest = scrapy.Field()
             ------------------------------------------Environment Data
             navigatorTest = scrapy.Field()
             screenTest = scrapy.Field()
-            batteryTest = scrapy.Field()
-            memoryTest = scrapy.Field()
             ------------------------------------------Canvas Fingerprints
             canvas1Test = scrapy.Field()
             canvas2Test = scrapy.Field()
@@ -85,13 +67,12 @@ class IntoliSpider(scrapy.Spider):
             canvas4Test = scrapy.Field()
             canvas5Test = scrapy.Field()
             ------------------------------------------Codec Support
-            videoCodecsTest = scrapy.Field()
             audioCodecsTest = scrapy.Field()
             ------------------------------------------Fp-collect raw dump
             fpCollectDump = scrapy.Field()
         """
 
-        def extract_table_elements(snippet, default=None):
+        def extract_general_table_elements(snippet, default=None):
             """
             Extracts test status and value from a <tr> snippet.
             Returns a dict with 'status' and 'value' keys.
@@ -104,36 +85,61 @@ class IntoliSpider(scrapy.Spider):
                 "status": status_class if status_class else default,
                 "value": value.strip() if value else default
             }
+        
+        def extract_fingerprint_table_elements(snippet, default=None):
+            result_cell = snippet.css('td:nth-child(2)')
+            status = result_cell.css('::text').get()
+
+            value_cell = snippet.css('td:nth-child(3)')
+            value = value_cell.css('::text').get()
+            return {
+                "status": status if status else default,
+                "value": value.strip() if value else default
+            }
+
 
         generalTests = response.css('table tr')
         try:
-            userAgentTest = extract_table_elements(generalTests[1])
-            webDriverTest = extract_table_elements(generalTests[2])
-            webDriverAdvancedTest = extract_table_elements(generalTests[3])
-            chromeTest = extract_table_elements(generalTests[4])
-            permissionsTest = extract_table_elements(generalTests[5])
-            pluginsLengthTest = extract_table_elements(generalTests[6])
-            pluginsTypeTest = extract_table_elements(generalTests[7])
-            languageTest = extract_table_elements(generalTests[8])
-            webGLVendorTest = extract_table_elements(generalTests[9])
-            webGLRendererTest = extract_table_elements(generalTests[10])
-            brokenImageDimensionsTest = extract_table_elements(generalTests[11])
+            userAgentTest = extract_general_table_elements(generalTests[1])
+            webDriverTest = extract_general_table_elements(generalTests[2])
+            webDriverAdvancedTest = extract_general_table_elements(generalTests[3])
+            chromeTest = extract_general_table_elements(generalTests[4])
+            permissionsTest = extract_general_table_elements(generalTests[5])
+            pluginsLengthTest = extract_general_table_elements(generalTests[6])
+            pluginsTypeTest = extract_general_table_elements(generalTests[7])
+            languageTest = extract_general_table_elements(generalTests[8])
+            webGLVendorTest = extract_general_table_elements(generalTests[9])
+            webGLRendererTest = extract_general_table_elements(generalTests[10])
+            brokenImageDimensionsTest = extract_general_table_elements(generalTests[11])
         except Exception as e:
             self.logger.warning(f"Failed to extract general tests: {e}")
             return
 
-        # TODO implement Playwright so that fingerprint scanner tests can be scraped
         fingerprintTests = response.css('[id=fp2] tr')
         try:
-
-
-
-        print("---------------------------------------------------------------------------------------")
-        print(fingerprintTests)
-
-        # print(response.body)
-
-
+            phantomUaTest = extract_fingerprint_table_elements(fingerprintTests[0])
+            phantomPropertiesTest = extract_fingerprint_table_elements(fingerprintTests[1])
+            phantomEtslTest = extract_fingerprint_table_elements(fingerprintTests[2])
+            phantomLanguageTest = extract_fingerprint_table_elements(fingerprintTests[3])
+            phantomWebsocketTest = extract_fingerprint_table_elements(fingerprintTests[4])
+            MQ_ScreenTest = extract_fingerprint_table_elements(fingerprintTests[5])
+            phantomOverflowTest = extract_fingerprint_table_elements(fingerprintTests[6])
+            phantomWindowHeightTest = extract_fingerprint_table_elements(fingerprintTests[7])
+            headchrUaTest = extract_fingerprint_table_elements(fingerprintTests[8])
+            headchrChromeObjTest = extract_fingerprint_table_elements(fingerprintTests[9])
+            headchrPermissionsTest = extract_fingerprint_table_elements(fingerprintTests[10])
+            headchrPluginsTest = extract_fingerprint_table_elements(fingerprintTests[11])
+            headchrIframeTest = extract_fingerprint_table_elements(fingerprintTests[12])
+            chromeDebugToolsTest = extract_fingerprint_table_elements(fingerprintTests[13])
+            seleniumDriverTest = extract_fingerprint_table_elements(fingerprintTests[14])
+            batteryTest = extract_fingerprint_table_elements(fingerprintTests[15])
+            memoryTest = extract_fingerprint_table_elements(fingerprintTests[16])
+            transparentPixelTest = extract_fingerprint_table_elements(fingerprintTests[17])
+            sequentumTest = extract_fingerprint_table_elements(fingerprintTests[18])
+            videoCodecsTest = extract_fingerprint_table_elements(fingerprintTests[19])
+        except Exception as e:
+            self.logger.warning(f"Failed to extract fingerprint tests: {e}")
+            return
 
         item = IntoliItem(
             userAgentTest=userAgentTest,
@@ -147,6 +153,26 @@ class IntoliSpider(scrapy.Spider):
             webGLVendorTest=webGLVendorTest,
             webGLRendererTest=webGLRendererTest,
             brokenImageDimensionsTest=brokenImageDimensionsTest,
+
+            phantomUaTest=phantomUaTest,
+            phantomPropertiesTest=phantomPropertiesTest,
+            phantomEtslTest=phantomEtslTest,
+            phantomLanguageTest=phantomLanguageTest,
+            phantomWebsocketTest=phantomWebsocketTest,
+            MQ_ScreenTest=MQ_ScreenTest,
+            phantomOverflowTest=phantomOverflowTest,
+            phantomWindowHeightTest=phantomWindowHeightTest,
+            headchrUaTest=headchrUaTest,
+            headchrChromeObjTest=headchrChromeObjTest,
+            headchrPermissionsTest=headchrPermissionsTest,
+            headchrPluginsTest=headchrPluginsTest,
+            headchrIframeTest=headchrIframeTest,
+            chromeDebugToolsTest=chromeDebugToolsTest,
+            seleniumDriverTest=seleniumDriverTest,
+            batteryTest=batteryTest,
+            memoryTest=memoryTest,
+            transparentPixelTest=transparentPixelTest,
+            sequentumTest=sequentumTest,
+            videoCodecsTest=videoCodecsTest,
         )
-        print(dict(item))
         yield item

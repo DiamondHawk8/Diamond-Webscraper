@@ -91,3 +91,6 @@ class IntoliItem(scrapy.Item):
 
     # Full raw dump (if needed for fallback or debugging)
     fpCollectDump = scrapy.Field()
+
+    # ?
+    transparentPixelTest = scrapy.Field()
