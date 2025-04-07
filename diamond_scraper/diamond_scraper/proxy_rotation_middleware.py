@@ -1,36 +1,36 @@
+import random
+from scrapy import signals
 class ProxyRotationMiddleware:
     """
     Middleware for rotating proxies between requests.
-
-    Responsibilities:
-    - Assigns a new proxy from a list to each request.
-    - Ensures proxy usage is randomized and optionally avoids reuse.
-    - Integrates with Playwright-enabled requests if needed.
+        - Assigns a random proxy to each request
+        - Pulls proxies from settings from  PROXY_LIST
     """
 
     def __init__(self, proxy_list):
-
-        pass  # Store the proxy list internally
+        self.proxy_list = proxy_list
 
     @classmethod
     def from_crawler(cls, crawler):
         """
-        Loads proxy list from Scrapy settings and returns an instance.
 
-        Args:
-            crawler: The Scrapy crawler instance.
-
-        Returns:
-            ProxyRotationMiddleware: Configured middleware instance.
+        :param crawler: crawler instance
+        :return: middleware instance
         """
-        pass  # Extract setting like 'PROXY_LIST' from crawler.settings
+        middleware = cls(crawler.settings.get('PROXY_LIST', []))
+        crawler.signals.connect(middleware.spider_closed, signal=signals.spider_closed)
+        return middleware
 
     def process_request(self, request, spider):
         """
-        Attaches a proxy to the request.
 
-        Args:
-            request (scrapy.Request): The outgoing request.
-            spider (scrapy.Spider): The active spider instance.
+        :param request: outgoing request
         """
-        pass  # Randomly assign a proxy to request.meta['proxy']
+        # TODO dynamically assign proxies based on responses
+        if self.proxy_list:
+            request.meta['proxy'] = random.choice(self.proxy_list)
+        else:
+            spider.logger.warning("Proxy list is empty. Request will not use a proxy.")
+
+    def spider_closed(self, spider):
+        spider.logger.info(f"Proxy middleware shut down. Total proxies used: {len(self.proxy_list)}")
