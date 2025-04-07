@@ -1,5 +1,4 @@
 import sqlite3
-from itemadapter import ItemAdapter
 from diamond_scraper.utils import db_utils
 
 class DatabasePipeline:

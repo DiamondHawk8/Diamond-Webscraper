@@ -1,4 +1,3 @@
-
 import scrapy
 from diamond_scraper.items import IntoliItem
 import diamond_scraper.utils.stealth_utils as stealth

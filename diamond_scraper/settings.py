@@ -64,8 +64,8 @@ DEFAULT_REQUEST_HEADERS = {
 
 SPIDER_MIDDLEWARES = {
     # Session stats only executes on close, so order doesn't affect it much
-    "diamond_scraper.middlewares.SessionStatsLoggerMiddleware": 100,
-    "diamond_scraper.middlewares.DiamondScraperSpiderMiddleware": 543,
+    "diamond_scraper.middlewares.core_middlewares.SessionStatsLoggerMiddleware": 100,
+    "diamond_scraper.middlewares.core_middlewares.DiamondScraperSpiderMiddleware": 543,
 }
 
 # ─────────────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ SPIDER_MIDDLEWARES = {
 # ─────────────────────────────────────────────────────────────
 
 DOWNLOADER_MIDDLEWARES = {
-    "diamond_scraper.middlewares.DiamondScraperDownloaderMiddleware": 543,
+    "diamond_scraper.middlewares.core_middlewares.DiamondScraperDownloaderMiddleware": 543,
     "diamond_scraper.middlewares.proxy_rotation_middleware.ProxyRotationMiddleware": 543,
 }
 
@@ -156,7 +156,7 @@ PLAYWRIGHT_MAX_CONTEXTS = 1
 # ─────────────────────────────────────────────────────────────
 #                     PROXY / STEALTH SETTINGS
 # ─────────────────────────────────────────────────────────────
-
+"""
 PROXY_LIST = [
     "http://51.158.68.133:8811",
     "http://64.225.8.82:9981",
@@ -164,5 +164,5 @@ PROXY_LIST = [
     "http://138.68.60.8:8080",
     "http://20.94.229.49:3128",
 ]
-
+"""
 # PROXY_LIST = os.getenv("PROXY_LIST", "").split(",")
