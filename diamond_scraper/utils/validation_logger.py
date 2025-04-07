@@ -1,7 +1,7 @@
 from enum import Enum
 from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
-
+import stats_util
 
 class ValidationLogger:
     def __init__(self, spider, enable_logging=False, pipline_name=None, logging_rules=None, threshold_rules=None,
@@ -79,29 +79,6 @@ class ValidationLogger:
 
         return item
 
-    def get_stat(self, stat_name: str, default=None):
-        """
-        Fetches the current value of a tracked statistic.
-        Used to retrieve statistics stored across different pipelines.
-        """
-        return self.spider.crawler.stats.get_value(stat_name, default)
-
-    def increment_stat(self, stat_name: str, value: int = 1):
-        self.spider.crawler.stats.inc_value(stat_name, count=value)
-
-    def append_to_stat(self, stat_name: str, data: dict):
-        """
-        Stores non-integer statistics such as flagged/dropped items.
-        Ensures previous values are retained instead of overwritten.
-        Formatted as a list of dictionaries.
-        """
-        existing_stat = self.get_stat(stat_name, default=[])
-        if not isinstance(existing_stat, list):
-            existing_stat = [existing_stat]
-
-        existing_stat.append(data)
-        self.spider.crawler.stats.set_value(stat_name, existing_stat)
-
     def validate_item(self, item: dict, rules: dict[str, callable], use_universal_default_rules=True) \
             -> (dict, dict[str, dict]):
         """
@@ -118,7 +95,7 @@ class ValidationLogger:
         self.log_event("ITEM_INPUT", "Item input before validation: {}", item)
 
         if self.logging_rules.get("ITEM_INPUT", {}).get("store", False):
-            self.append_to_stat("ITEM_INPUT", item)
+            stats_util.append_to_stat(self.spider, "ITEM_INPUT", item)
 
         adapter = ItemAdapter(item)
         flagged_values = {}
@@ -175,7 +152,7 @@ class ValidationLogger:
         self.log_event("ITEM_OUTPUT", "Item output after validation: {}", item)
 
         if self.logging_rules.get("ITEM_OUTPUT", {}).get("store", False):
-            self.append_to_stat("ITEM_OUTPUT", item)
+            stats_util.append_to_stat(self.spider, "ITEM_OUTPUT", item)
 
         return item, {"flagged": flagged_values, "invalid": invalid_values}
 
@@ -239,16 +216,16 @@ class ValidationLogger:
         self.log_event("INVALID_ITEMS", "Invalid values: {}", invalid_values)
 
         if self.logging_rules.get("TOTAL_FLAGGED", {}).get("store", False):
-            self.increment_stat(StatEnum.TOTAL_FLAGGED.value, num_flagged_items)
+            stats_util.increment_stat(self.spider, StatEnum.TOTAL_FLAGGED.value, num_flagged_items)
 
         if self.logging_rules.get("TOTAL_INVALID", {}).get("store", False):
-            self.increment_stat(StatEnum.TOTAL_INVALID.value, num_invalid_items)
+            stats_util.increment_stat(self.spider, StatEnum.TOTAL_INVALID.value, num_invalid_items)
 
         if self.logging_rules.get("FLAGGED_ITEMS", {}).get("store", False):
-            self.append_to_stat(StatEnum.FLAGGED_ITEMS.value, flagged_values)
+            stats_util.append_to_stat(self.spider, StatEnum.FLAGGED_ITEMS.value, flagged_values)
 
         if self.logging_rules.get("INVALID_ITEMS", {}).get("store", False):
-            self.append_to_stat(StatEnum.INVALID_ITEMS.value, invalid_values)
+            stats_util.append_to_stat(self.spider, StatEnum.INVALID_ITEMS.value, invalid_values)
 
     def log_event(self, event_name: str, message_template: str, *args, **kwargs):
         """
@@ -283,7 +260,7 @@ def track_db_event(self, event: Enum, message: str = None, level: str = "info"):
     :param level: logging level of the event
     :return: None
     """
-    self.increment_stat(event.value, 1)
+    stats_util.increment_stat(self.spider, event.value, 1)
 
     if message and self.enable_logging:
         # Use self.spider.logger if available
