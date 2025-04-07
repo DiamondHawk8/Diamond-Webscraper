@@ -21,10 +21,11 @@ class ProxyRotationMiddleware:
         :param crawler: crawler instance
         :return: middleware instance
         """
+        proxy_list = crawler.settings.get('PROXY_LIST', [])
         fallback_proxy = crawler.settings.get("FALLBACK_PROXY", None)
         failure_check_enabled = crawler.settings.get("PROXY_FAILURE_CHECK_ENABLED", False)
         failure_threshold = crawler.settings.get("FAILURE_THRESHOLD", None)
-        middleware = cls(crawler.settings.get('PROXY_LIST', []), fallback_proxy, failure_check_enabled, failure_threshold)
+        middleware = cls(proxy_list, fallback_proxy, failure_check_enabled, failure_threshold)
         crawler.signals.connect(middleware.spider_closed, signal=signals.spider_closed)
         return middleware
 
@@ -50,8 +51,16 @@ class ProxyRotationMiddleware:
             spider.logger.warning("No viable proxies provided. Request will not use a proxy.")
 
         if proxy:
-            spider.logger.info()
+            spider.logger.info(f"Using proxy: {proxy}")
             request.meta['proxy'] = proxy
+
+    def process_exception(self, request, exception, spider):
+        """
+        Increments failure count if a proxy is used and the request fails.
+        """
+        proxy = request.meta.get('proxy')
+        if proxy and self.failure_check_enabled:
+            self.proxy_failures[proxy] += 1
 
     def spider_closed(self, spider):
         stats_util.append_to_stat(spider, "PROXY_FAILURES", self.proxy_failures)
