@@ -57,6 +57,9 @@ class IntoliItem(scrapy.Item):
     phantomOverflowTest = scrapy.Field()
     phantomWindowHeightTest = scrapy.Field()
 
+    # CSS media queries
+    MQ_ScreenTest = scrapy.Field()
+
     # Headless Chrome Detection
     headchrUaTest = scrapy.Field()
     headchrChromeObjTest = scrapy.Field()

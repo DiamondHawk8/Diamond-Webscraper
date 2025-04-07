@@ -12,21 +12,29 @@ class IntoliSpider(scrapy.Spider):
 
     def start_requests(self):
         for url in self.urls:
-            # headers = {"User-Agent": stealth.get_random_user_agent()}
-            # self.logger.info(f"Beginning request for {url} with UA: {headers['User-Agent']}")
+            headers = {"User-Agent": stealth.get_random_user_agent()}
+            self.logger.info(f"Beginning request for {url} with UA: {headers['User-Agent']}")
             self.logger.info(f"Beginning request for {url}")
             yield scrapy.Request(url=url,
                                  callback=self.parse,
-                                 # headers=headers,
+                                 headers=headers,
                                  meta={
                                      "playwright": True,
                                      "playwright_page_methods": [
+                                         # Remove webdriver
+                                         # TODO WebGL spoofing, stack trace tampering, property descriptor traps
+                                         PageMethod("add_init_script", """
+                                         Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                                         Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+                                         Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
+                                         window.chrome = { runtime: {} };
+                                         """),
                                          PageMethod('wait_for_selector', 'body'),
                                          PageMethod(
                                              "wait_for_function",
                                              "document.querySelector('#fp2') && document.querySelector('#fp2').rows.length > 2"
                                          ),
-                                         PageMethod("wait_for_timeout", 1500)
+                                         PageMethod("wait_for_timeout", 30000) # Debug, should not be set this high for general purpsoes
                                      ]
                                  }
                                  )
@@ -42,7 +50,6 @@ class IntoliSpider(scrapy.Spider):
 
     def parse(self, response):
         print("arrived at parse")
-        time.sleep(10)
         self.logger.info("[INTOLI] Playwright rendering triggered.")
         print(f"[DEBUG] Rendered response length: {len(response.text)}")
         """
@@ -53,6 +60,7 @@ class IntoliSpider(scrapy.Spider):
             phantomEtslTest = scrapy.Field()
             phantomLanguageTest = scrapy.Field()
             phantomWebsocketTest = scrapy.Field()
+            MQ_ScreenTest = scrapy.Field()
             phantomOverflowTest = scrapy.Field()
             phantomWindowHeightTest = scrapy.Field()
             ------------------------------------------Headless Chrome Detection
@@ -115,11 +123,12 @@ class IntoliSpider(scrapy.Spider):
             return
 
         # TODO implement Playwright so that fingerprint scanner tests can be scraped
-        fingerprintTests = response.css('[id=fp2] tr').getall()
+        fingerprintTests = response.css('[id=fp2] tr')
+        try:
 
-        print(fingerprintTests)
 
-        fingerprintTests = response.css('[id=fp2] tr').get()
+
+        print("---------------------------------------------------------------------------------------")
         print(fingerprintTests)
 
         # print(response.body)
