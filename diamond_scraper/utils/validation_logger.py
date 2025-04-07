@@ -1,7 +1,7 @@
 from enum import Enum
 from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
-import stats_util
+import diamond_scraper.utils.stats_util as stats_util
 
 class ValidationLogger:
     def __init__(self, spider, enable_logging=False, pipline_name=None, logging_rules=None, threshold_rules=None,
