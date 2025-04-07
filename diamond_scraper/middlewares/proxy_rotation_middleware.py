@@ -14,6 +14,7 @@ class ProxyRotationMiddleware:
         self.failure_check_enabled = failure_check_enabled
         self.failure_threshold = failure_threshold
         self.proxy_failures = defaultdict(int)  # Tracks failures per proxy
+        self.proxy_uses = defaultdict(int)  # Tracks usage of each proxy
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -52,6 +53,7 @@ class ProxyRotationMiddleware:
 
         if proxy:
             spider.logger.info(f"Using proxy: {proxy}")
+            self.proxy_uses[proxy] += 1
             request.meta['proxy'] = proxy
 
     def process_exception(self, request, exception, spider):
@@ -64,4 +66,5 @@ class ProxyRotationMiddleware:
 
     def spider_closed(self, spider):
         stats_util.append_to_stat(spider, "PROXY_FAILURES", self.proxy_failures)
+        stats_util.append_to_stat(spider, "PROXY_USES", self.proxy_uses)
         spider.logger.info(f"Proxy middleware shut down. Total proxies used: {len(self.proxy_list)}")
