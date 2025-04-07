@@ -98,7 +98,7 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
 
 
 
-# AAAAAAAAA
+# I spent 4 hours trying to fix playwright
 HTTPCACHE_ENABLED = False
 HTTPCACHE_EXPIRATION_SECS = 3600
 HTTPCACHE_DIR = "httpcache"
@@ -129,5 +129,10 @@ PLAYWRIGHT_LAUNCH_OPTIONS = {
     "slow_mo": 500,
 }
 
+PLAYWRIGHT_DEFAULT_CONTEXT_OPTIONS = {
+    "viewport": None,  # allows native window sizing
+    "ignoreHTTPSErrors": True,
+}
+
 PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 20 * 1000  # 20 seconds
-PLAYWRIGHT_MAX_CONTEXTS = 5  # Max concurrent Playwright session
+PLAYWRIGHT_MAX_CONTEXTS = 1  # Max concurrent Playwright session
