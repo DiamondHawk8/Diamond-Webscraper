@@ -6,6 +6,8 @@ import random
 from scrapy_playwright.page import PageMethod
 import time
 
+# TODO, log database name to spider stats so that fine tuning can occur
+
 class IntoliSpider(scrapy.Spider):
     name = 'IntoliSpider'
     urls = ["https://bot.sannysoft.com/"]

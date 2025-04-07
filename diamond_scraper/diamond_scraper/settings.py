@@ -53,7 +53,8 @@ SPIDER_MIDDLEWARES = {
 
 
 DOWNLOADER_MIDDLEWARES = {
-   # "diamond_scraper.middlewares.DiamondScraperDownloaderMiddleware": 543,
+    "diamond_scraper.middlewares.DiamondScraperDownloaderMiddleware": 543,
+    "diamond_scraper.middlewares.proxy_rotation_middleware.ProxyRotationMiddleware": 543,
 }
 
 DOWNLOAD_HANDLERS = {
@@ -70,8 +71,8 @@ DOWNLOAD_HANDLERS = {
 ITEM_PIPELINES = {
     # "diamond_scraper.pipelines.core_pipelines.DiamondScraperPipeline": 100,
     # "diamond_scraper.pipelines.InvalidDataPipeline": 200,
-    #"diamond_scraper.pipelines.core_pipelines.DuplicatesPipeline": 300,
-    # 'diamond_scraper.pipelines.db_pipeline.DatabasePipeline': 998,
+    "diamond_scraper.pipelines.core_pipelines.DuplicatesPipeline": 300,
+    'diamond_scraper.pipelines.db_pipeline.DatabasePipeline': 998,
     # "diamond_scraper.pipelines.TestPipeline": 999,
 }
 
@@ -97,8 +98,6 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
 #AUTOTHROTTLE_DEBUG = False
 
 
-
-# I spent 4 hours trying to fix playwright
 HTTPCACHE_ENABLED = False
 HTTPCACHE_EXPIRATION_SECS = 3600
 HTTPCACHE_DIR = "httpcache"
@@ -136,3 +135,12 @@ PLAYWRIGHT_DEFAULT_CONTEXT_OPTIONS = {
 
 PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 20 * 1000  # 20 seconds
 PLAYWRIGHT_MAX_CONTEXTS = 1  # Max concurrent Playwright session
+
+
+PROXY_LIST = [
+    "http://51.158.68.133:8811",
+    "http://64.225.8.82:9981",
+    "http://185.199.228.146:7492",
+    "http://138.68.60.8:8080",
+    "http://20.94.229.49:3128",
+]

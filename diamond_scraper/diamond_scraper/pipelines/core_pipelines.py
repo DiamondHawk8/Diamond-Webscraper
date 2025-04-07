@@ -59,13 +59,15 @@ class DuplicatesPipeline:
         spider.logger.debug(f"Raw item before {self.__class__.__name__} processing: {dict(adapter)}")
 
         adapter = ItemAdapter(item)
-        if adapter["timestamp"] in self.timestamps_seen:
-            spider.logger.warning(f"Item timestamp already seen: {adapter['timestamp']}")
-            self.items_dropped += 1
-            raise DropItem(f"Item timestamp already seen: {adapter['timestamp']}")
-        else:
-            self.timestamps_seen.add(adapter["timestamp"])
-            return dict(adapter)
+        if "timestamp" in adapter:
+            if adapter["timestamp"] in self.timestamps_seen:
+                spider.logger.warning(f"Item timestamp already seen: {adapter['timestamp']}")
+                self.items_dropped += 1
+                raise DropItem(f"Item timestamp already seen: {adapter['timestamp']}")
+            else:
+                self.timestamps_seen.add(adapter["timestamp"])
+                return dict(adapter)
+        return dict(adapter)
 
     def open_spider(self, spider):
         spider.logger.info(f"Starting {self.__class__.__name__} validation")
