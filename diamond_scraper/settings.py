@@ -166,3 +166,5 @@ PROXY_LIST = [
 ]
 """
 # PROXY_LIST = os.getenv("PROXY_LIST", "").split(",")
+FALLBACK_PROXY = None
+
