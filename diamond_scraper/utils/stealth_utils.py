@@ -13,7 +13,6 @@ def get_weighted_choice(population, weights, k=1):
         return random.choices(population, weights=weights, k=k)[0]
 
 
-
 def get_random_user_agent(skew=True) -> str:
     # TODO, customize user agents like accept languages
     user_agents = {
@@ -270,3 +269,30 @@ def get_random_headers(replacements=None) -> dict:
 
 def get_random_wait_time(min_ms=1500, max_ms=4500) -> int:
     return random.randint(min_ms, max_ms)
+
+
+def is_captcha_page(response):
+    """
+    Detects common CAPTCHA indicators in response
+    """
+    # TODO, perform more advanced Captcha recognition
+    body = response.text.lower()
+
+    if "g-recaptcha" in body:
+        return True
+    if "why did this happen?" in body:
+        return True
+    if "captcha" in body and "cloudflare" in body:
+        return True
+    if response.css("iframe[src*='captcha']"):
+        return True
+
+    return False
+
+
+def handle_captcha(response, spider):
+    """
+    Not available on public branch
+    """
+    spider.logger.warning("CAPTCHA detected on: %s", response.url)
+    return
