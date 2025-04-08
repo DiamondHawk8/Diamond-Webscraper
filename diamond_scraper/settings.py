@@ -158,11 +158,6 @@ PLAYWRIGHT_MAX_CONTEXTS = 1
 # ─────────────────────────────────────────────────────────────
 
 PROXY_LIST = [
-    "http://15.235.53.20:28003",
-    "http://43.155.196.88:9090",
-    "http://170.106.197.21:13001",
-    "http://43.130.44.212:13001",
-    "http://43.130.59.122:13001",
 ]
 
 # PROXY_LIST = os.getenv("PROXY_LIST", "").split(",")
@@ -175,3 +170,4 @@ ENABLE_FALLBACK_PROXY = True
 PROXY_FAILURE_CHECK_ENABLED = True
 FAILURE_THRESHOLD = 3
 
+# TODO Database local settings

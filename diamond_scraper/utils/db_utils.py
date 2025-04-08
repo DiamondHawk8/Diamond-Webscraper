@@ -53,33 +53,36 @@ def generate_create_table(item, table_name=None, override_types=None):
     pass
 
 
-def generate_insert_sql(item, table_name=None):
+def generate_insert_sql(item, table_name=None, backend="sqlite"):
     """
     Returns (sql_string, values_tuple) for inserting the item into the specified table.
 
-    (str, tuple):
-        str: "INSERT INTO table_name (field1, field2, ...) VALUES (?, ?, ...)"
-        tuple: (val1, val2, ...) extracted from item in the same order as columns.
+    For sqlite: uses "?" placeholders
+    For postgres: uses "%s" placeholders
     """
     if not table_name:
         table_name = item.__class__.__name__.lower()
 
     adapter = ItemAdapter(item)
-
     field_names = []
     values = []
 
     for field_name, value in adapter.items():
         field_names.append(field_name)
-        # Handle dicts/lists by JSON-encoding them
+        # JSON-encode if dict or list
         if isinstance(value, (dict, list)):
             value = json.dumps(value)
         values.append(value)
 
     columns = ", ".join(field_names)
-    placeholders = ", ".join(["?"] * len(values))
-    command = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders});"
 
+    # Choose placeholders
+    if backend == "postgres":
+        placeholders = ", ".join(["%s"] * len(values))
+    else:  # Default to sqlite
+        placeholders = ", ".join(["?"] * len(values))
+
+    command = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders});"
     return command, tuple(values)
 
 
@@ -103,14 +106,14 @@ def initialize_table(cursor, item, table_name=None, override_types=None, spider=
         log_db_action(spider, "CREATE_TABLE_FAILED", table_name, item=item, error=e)
 
 
-def insert_item(cursor, item, table_name, spider=None, log=True):
+def insert_item(cursor, item, table_name, spider=None, log=True, backend="sqlite"):
     """
     Execution wrapper that:
     - Calls generate_insert_sql() to build insert SQL + values
     - Executes insert using cursor
     - Optionally logs the result via log_db_action()
     """
-    sql, vals = generate_insert_sql(item, table_name)
+    sql, vals = generate_insert_sql(item, table_name, backend=backend)
     try:
         cursor.execute(sql, vals)
         if log:

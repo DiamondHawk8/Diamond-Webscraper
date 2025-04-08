@@ -1,5 +1,7 @@
 import sqlite3
 from diamond_scraper.utils import db_utils
+import os
+
 
 class DatabasePipeline:
     """
@@ -11,6 +13,7 @@ class DatabasePipeline:
         self.connection = None
         self.cursor = None
         self.auto_create = True  # TODO Can be toggled in settings.py
+        self.backend = os.getenv("DB_BACKEND", "sqlite")
 
     def open_spider(self, spider):
         """
@@ -21,6 +24,7 @@ class DatabasePipeline:
         db_path = spider.settings.get('DB_PATH', "DWS_scraper.db")
         self.connection = db_utils.get_db_connection(db_path=db_path)
         self.cursor = self.connection.cursor()
+
     def close_spider(self, spider):
         """
         Commit any changes and close the database connection.
@@ -42,12 +46,12 @@ class DatabasePipeline:
 
         db_utils.insert_item(self.cursor, item, table_name, spider=spider)
         return item
+
     def insert_item_into(self, item, spider, table_name):
         """
         Utility method for manually inserting an item into a specific table.
         """
-        db_utils.insert_item(self.cursor, item, table_name)
-        pass
+        db_utils.insert_item(self.cursor, item, table_name, backend=self.backend)
 
     def create_table(self, item, table_name=None):
         """
