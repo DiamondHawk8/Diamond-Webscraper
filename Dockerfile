@@ -13,7 +13,10 @@ RUN pip install --no-cache-dir pyarmor
 COPY . .
 
 # Obfuscate the entire diamond_scraper folder recursively
-RUN mkdir -p dist_obf && pyarmor obfuscate diamond_scraper --recursive --output dist_obf --exact
+RUN mkdir -p dist_obf/diamond_scraper && pyarmor obfuscate diamond_scraper \
+    --recursive \
+    --output dist_obf/diamond_scraper \
+    --exact
 
 # Debug: list obfuscated files
 RUN echo "==== Debug listing dist_obf ====" && ls -R dist_obf
@@ -22,7 +25,8 @@ RUN echo "==== Debug listing dist_obf ====" && ls -R dist_obf
 RUN rm -rf diamond_scraper
 
 
-# Runtime image
+
+
 FROM python:3.10-slim AS runtime
 
 WORKDIR /app
