@@ -1,46 +1,32 @@
-FROM python:3.10-slim AS builder
+# ----------------------------------------
+# Stage 1: Builder
+# ----------------------------------------
+FROM python:3.10-slim as builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends gcc
 
+# Working dir
 WORKDIR /build
 
 COPY requirements.txt ./
-
 RUN pip install --no-cache-dir -r requirements.txt
-
-RUN pip install --no-cache-dir pyarmor
 
 COPY . .
 
-# Obfuscate the entire diamond_scraper folder recursively
-RUN mkdir -p dist_obf/diamond_scraper && pyarmor obfuscate diamond_scraper \
-    --recursive \
-    --output dist_obf/diamond_scraper \
-    --exact
-
-# Debug: list obfuscated files
-RUN echo "==== Debug listing dist_obf ====" && ls -R dist_obf
-
-# Remove raw elements after obfuscation
-RUN rm -rf diamond_scraper
+# TODO figure out how to fix pyarmor
 
 
-
-
-FROM python:3.10-slim AS runtime
+# ----------------------------------------
+# Stage 2: Runtime
+# ----------------------------------------
+FROM python:3.10-slim as runtime
 
 WORKDIR /app
 
-# Install runtime dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy obfuscated diamond_scraper folder
-COPY --from=builder /build/dist_obf/diamond_scraper /app/diamond_scraper
+COPY --from=builder /build /app
 
-# Copy remaining non-sensitive files
-COPY --from=builder /build/runner.py /app/runner.py
-COPY --from=builder /build/scrapy.cfg /app/scrapy.cfg
-
-# Default entrypoint
-CMD ["python", "runner.py", "base_spider"]
+# Default command
+CMD ["python", "runner.py", "base"]
