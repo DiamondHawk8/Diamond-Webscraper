@@ -4,6 +4,7 @@ from itemadapter import ItemAdapter
 import sqlite3
 import json
 
+
 def generate_create_table(item, table_name=None, override_types=None):
     """
     Accepts a Scrapy item or adapter and returns a SQL statement string:
@@ -74,7 +75,6 @@ def generate_insert_sql(item, table_name=None):
     command = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders});"
 
     return command, tuple(values)
-
 
 
 def initialize_table(cursor, item, table_name=None, override_types=None, spider=None):
@@ -149,6 +149,7 @@ def clear_table(cursor, table_name, spider=None):
         spider.logger.info(f"Clearing table {table_name}")
     pass
 
+
 def drop_table(cursor, table_name, spider=None):
     """
     Drops specified table
@@ -159,6 +160,34 @@ def drop_table(cursor, table_name, spider=None):
     if spider:
         spider.logger.info(f"Dropped table {table_name}")
 
+
 def get_existing_tables(cursor):
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
     return [row[0] for row in cursor.fetchall()]
+
+
+def get_db_connection():
+    """
+    Open a database connection based on the DB_BACKEND environment variable.
+
+    Usage:
+        connection = get_db_connection()
+        # connection is either an SQLite or PostgreSQL connection object.
+
+    Environment Variables:
+        DB_BACKEND (str): "sqlite" or "postgres"
+
+    For PostgreSQL
+        DB_HOST (str): Host of the PostgreSQL server
+        DB_PORT (str): Port number for PostgreSQL
+        DB_NAME (str): Database name
+        DB_USER (str): Username
+        DB_PASSWORD (str): Password
+
+    Returns:
+        A connection object for the selected database backend.
+    """
+    # TODO: read DB_BACKEND from environment variables
+    # TODO: if DB_BACKEND == 'postgres', load psycopg2, build connection with DB_HOST, DB_PORT, ec.
+    # TODO: else default to sqlite connection
+    pass
