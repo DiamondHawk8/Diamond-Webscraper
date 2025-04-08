@@ -2,7 +2,9 @@ import traceback
 
 from itemadapter import ItemAdapter
 import sqlite3
+import psycopg2
 import json
+import os
 
 
 def generate_create_table(item, table_name=None, override_types=None):
@@ -187,7 +189,35 @@ def get_db_connection():
     Returns:
         A connection object for the selected database backend.
     """
-    # TODO: read DB_BACKEND from environment variables
-    # TODO: if DB_BACKEND == 'postgres', load psycopg2, build connection with DB_HOST, DB_PORT, ec.
-    # TODO: else default to sqlite connection
-    pass
+
+    # fallback to "sqlite" if unset
+    db_backend = os.getenv("DB_BACKEND", "sqlite")
+
+    if db_backend == "postgres":
+        print("Using PostgreSQL database")
+        try:
+            conn = psycopg2.connect(
+                host=os.getenv("DB_HOST", "localhost"),
+                port=os.getenv("DB_PORT", "5432"),
+                dbname=os.getenv("DB_NAME", "DWS_db"),
+                user=os.getenv("DB_USER", "postgres"),
+                password=os.getenv("DB_PASSWORD", "secret")
+            )
+            conn.autocommit = True
+            return conn
+        except Exception as e:
+            print(f"Unable to connect to PostgreSQL database")
+            traceback.print_exc()
+
+    elif db_backend == "sqlite":
+        print("Using SQLite database")
+    else:
+        print(f"unknown DB backend {db_backend}, defaulting to SQLite")
+    try:
+        connection = sqlite3.connect(db_backend)
+    except Exception as e:
+        print(f"Unable to connect to SQLite database")
+    return connection
+
+
+
