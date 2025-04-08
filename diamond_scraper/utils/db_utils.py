@@ -5,6 +5,10 @@ import sqlite3
 import psycopg2
 import json
 import os
+import traceback
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def generate_create_table(item, table_name=None, override_types=None):
@@ -168,7 +172,7 @@ def get_existing_tables(cursor):
     return [row[0] for row in cursor.fetchall()]
 
 
-def get_db_connection():
+def get_db_connection(db_path=None):
     """
     Open a database connection based on the DB_BACKEND environment variable.
 
@@ -194,7 +198,7 @@ def get_db_connection():
     db_backend = os.getenv("DB_BACKEND", "sqlite")
 
     if db_backend == "postgres":
-        print("Using PostgreSQL database")
+        logger.info("Using PostgreSQL database")
         try:
             conn = psycopg2.connect(
                 host=os.getenv("DB_HOST", "localhost"),
@@ -206,18 +210,19 @@ def get_db_connection():
             conn.autocommit = True
             return conn
         except Exception as e:
-            print(f"Unable to connect to PostgreSQL database")
+            logger.error("Unable to connect to PostgreSQL database")
             traceback.print_exc()
+            raise e  # or sys.exit(1), or some graceful fallback
 
     elif db_backend == "sqlite":
         print("Using SQLite database")
     else:
-        print(f"unknown DB backend {db_backend}, defaulting to SQLite")
-    try:
-        connection = sqlite3.connect(db_backend)
-    except Exception as e:
-        print(f"Unable to connect to SQLite database")
-    return connection
-
+        logger.warning(f"Unknown DB_BACKEND='{db_backend}', defaulting to SQLite file='DWS_scraper.db'")
+        try:
+            connection = sqlite3.connect("DWS_scraper.db")
+            return connection
+        except Exception as e:
+            logger.error("Unable to connect to SQLite database")
+            traceback.print_exc()
 
 

@@ -19,9 +19,8 @@ class DatabasePipeline:
         - Create a cursor for executing SQL
         """
         db_path = spider.settings.get('DB_PATH', "DWS_scraper.db")
-        self.connection = sqlite3.connect(db_path)
+        self.connection = db_utils.get_db_connection(db_path=db_path)
         self.cursor = self.connection.cursor()
-
     def close_spider(self, spider):
         """
         Commit any changes and close the database connection.
