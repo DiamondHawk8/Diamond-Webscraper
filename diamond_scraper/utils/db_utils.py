@@ -216,6 +216,11 @@ def get_db_connection(db_path=None):
 
     elif db_backend == "sqlite":
         print("Using SQLite database")
+        if db_path:
+            connection = sqlite3.connect(db_path)
+        else:
+            connection = sqlite3.connect("DWS_scraper.db")
+        return connection
     else:
         logger.warning(f"Unknown DB_BACKEND='{db_backend}', defaulting to SQLite file='DWS_scraper.db'")
         try:
