@@ -1,5 +1,5 @@
 import os
-
+import tempfile
 # ─────────────────────────────────────────────────────────────
 #                      BASIC SCRAPY SETTINGS
 # ─────────────────────────────────────────────────────────────
@@ -127,8 +127,9 @@ HTTPCACHE_IGNORE_HTTP_CODES = []
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
 
-LOG_DIR = os.path.join(os.getcwd(), "logs")
+LOG_DIR = os.environ.get("LOG_PATH", os.path.join(tempfile.gettempdir(), "logs"))
 os.makedirs(LOG_DIR, exist_ok=True)
+
 LOG_FILE = os.path.join(LOG_DIR, "scrapy_output.log")
 LOG_LEVEL = "INFO"
 
