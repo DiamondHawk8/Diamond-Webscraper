@@ -75,7 +75,6 @@ def generate_insert_sql(item, table_name=None, backend="sqlite"):
         values.append(value)
 
     columns = ", ".join(field_names)
-
     # Choose placeholders
     if backend == "postgres":
         placeholders = ", ".join(["%s"] * len(values))

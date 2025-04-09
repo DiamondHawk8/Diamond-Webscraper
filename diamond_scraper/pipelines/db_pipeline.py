@@ -44,7 +44,7 @@ class DatabasePipeline:
         if self.auto_create:
             db_utils.initialize_table(self.cursor, item, table_name)
 
-        db_utils.insert_item(self.cursor, item, table_name, spider=spider)
+        db_utils.insert_item(self.cursor, item, table_name, spider=spider, backend=self.backend)
         return item
 
     def insert_item_into(self, item, spider, table_name):
