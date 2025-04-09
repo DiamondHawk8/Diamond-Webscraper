@@ -63,3 +63,27 @@ A web scraping project built on **Scrapy**, designed for scalability, modularity
    - For PostgreSQL, use environment variables to supply credentials.
 
 ---
+
+## Project Structure (Simplified)
+
+```
+diamond_scraper/
+├── items.py
+├── middlewares/
+│   ├── core_middlewares.py
+│   └── proxy_rotation_middleware.py
+├── pipelines/
+│   ├── core_pipelines.py
+│   └──  db_pipeline.py
+├── spiders/
+│   ├── base_spider.py
+│   ├── intoli_spider.py
+│   └── ...
+├── utils/
+│   ├── db_utils.py
+│   ├── stats_util.py
+│   ├── stealth_utils.py
+│   └── validation_logger.py
+├── settings.py
+└── runner.py
+```
