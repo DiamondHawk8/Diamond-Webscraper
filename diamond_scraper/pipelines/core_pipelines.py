@@ -14,7 +14,7 @@ class DiamondScraperPipeline:
         adapter = ItemAdapter(item)
 
         # Logged after adapter transformation to ensure proper formatting
-        spider.logger.debug(f"Raw item before {self.__class__.__name__} processing: {dict(adapter)}")
+        spider.logger.debug(f"Raw item before {self.__class__.__name__} processing: {adapter.item}")
 
         for key, value in adapter.items():
             adapter.update({key: value.lower().strip().replace(' ', '_')})
@@ -33,7 +33,7 @@ class DiamondScraperPipeline:
         for key, value in adapter.items():
             print(key, value)
         self.items_processed += 1
-        return dict(adapter)
+        return adapter.item
 
     def open_spider(self, spider):
         spider.logger.info(f"Starting {self.__class__.__name__} validation")
@@ -56,7 +56,7 @@ class DuplicatesPipeline:
         adapter = ItemAdapter(item)
 
         # Logged after adapter transformation to ensure proper formatting
-        spider.logger.debug(f"Raw item before {self.__class__.__name__} processing: {dict(adapter)}")
+        spider.logger.debug(f"Raw item before {self.__class__.__name__} processing: {adapter.item}")
 
         adapter = ItemAdapter(item)
         if "timestamp" in adapter:
@@ -66,8 +66,8 @@ class DuplicatesPipeline:
                 raise DropItem(f"Item timestamp already seen: {adapter['timestamp']}")
             else:
                 self.timestamps_seen.add(adapter["timestamp"])
-                return dict(adapter)
-        return dict(adapter)
+                return adapter.item
+        return adapter.item
 
     def open_spider(self, spider):
         spider.logger.info(f"Starting {self.__class__.__name__} validation")

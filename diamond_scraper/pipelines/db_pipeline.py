@@ -1,8 +1,7 @@
 import sqlite3
 from diamond_scraper.utils import db_utils
 import os
-
-
+from itemadapter import ItemAdapter
 class DatabasePipeline:
     """
     Pipeline to store items into a database.
@@ -39,6 +38,7 @@ class DatabasePipeline:
         - Ensure table exists (if auto_create is enabled)
         - Insert the item into the appropriate table
         """
+        adapter = ItemAdapter(item)
         table_name = item.__class__.__name__.lower()
 
         if self.auto_create:
