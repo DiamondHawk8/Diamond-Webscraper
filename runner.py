@@ -69,8 +69,9 @@ def setup_environment(args):
         env_settings['LOG_FILE'] = args.log_file
     else:
         time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        Path(f"logs/scraper_{time}").parent.mkdir(parents=True, exist_ok=True)
-        env_settings['LOG_FILE'] = f"logs/scraper_{time}.log"
+        default_log_dir = os.getenv("LOG_PATH", "/tmp/logs")  # fallback for containers
+        Path(default_log_dir).mkdir(parents=True, exist_ok=True)
+        env_settings['LOG_FILE'] = f"{default_log_dir}/scraper_{time}.log"
 
     # Update the log file path
     if args.tags is not None:
