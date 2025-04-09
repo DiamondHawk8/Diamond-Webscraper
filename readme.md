@@ -31,3 +31,35 @@ A web scraping project built on **Scrapy**, designed for scalability, modularity
    - Secrets and credentials injected at runtime via environment variables or K8s secrets.
 
 ---
+
+## Example Use Cases
+
+- Monitoring product data across multiple retailers.
+- Fingerprinting detection and anti-bot analysis.
+- Financial or market data extraction with validation pipelines.
+- Academic research involving structured web data collection.
+
+---
+
+## Getting Started
+
+1. **Install Dependencies**  
+   ```bash
+   pip install -r requirements.txt
+   playwright install
+   ```
+
+2. **Run a Spider**  
+   ```bash
+   python runner.py your_spider_name
+   ```
+
+3. **Configure Output & Logging**  
+   - Set output format with `-o`, `-f`.  
+   - Enable debugging or override settings with `-s`.
+
+4. **Select Database Backend**  
+   - Default is SQLite.  
+   - For PostgreSQL, use environment variables to supply credentials.
+
+---
